@@ -119,7 +119,7 @@ class Game:
                 if lost_cell in self.empty_cells:
                     self.empty_cells.pop(lost_cell)
                 else:
-                    #collides
+                    #collides or out of range
                     self.playing = False
                     self.food.kill() 
 
@@ -129,15 +129,6 @@ class Game:
 
                 for i in range(0, len(self.snake) - 1):
                     self.snake[i].direction = self.snake[i + 1].direction
-        
-        # check if out of range
-        x = self.snake[-1].rect.center[0]
-        y = self.snake[-1].rect.center[1]
-
-        if  x < 0 or x > WIDTH or y < BLANK_SIZE or y > BLANK_SIZE + self.rows * GRID_SIZE:
-            self.playing = False
-            self.food.kill()
-
     
     def events(self):
         for event in pg.event.get():
