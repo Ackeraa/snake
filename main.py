@@ -23,12 +23,14 @@ class Game:
         self.snake = []
         self.last_move = 0
         self.if_moved = 0
+        self.pause = 0
 
     def new(self):
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.last_pressed = 0
         self.if_moved = 1
         self.snake = []
+        self.empty_cells = {}
         for i in range(self.rows):
             for j in range(self.columns):
                 x = j * GRID_SIZE + GRID_SIZE // 2 
@@ -73,7 +75,7 @@ class Game:
             self.empty_cells.pop((x, y + GRID_SIZE))
             self.empty_cells.pop((x, y))
 
-        x = random.randint(0, len(self.empty_cells))
+        x = random.randint(0, len(self.empty_cells) - 1)
         food_pos = list(self.empty_cells.keys())[x]
         self.empty_cells.pop(food_pos)
         self.food = Food(self, food_pos)
@@ -87,44 +89,55 @@ class Game:
         while self.playing:
             self.clock.tick(FPS)
             self.events()
-            self.update()
+            if not self.pause:
+                self.update()
             self.draw()
 
     def update(self):
         now = pg.time.get_ticks()
         if now - self.last_move > MOVE_GAP:
             self.last_move = now
-            self.all_sprites.update()
-            self.if_moved = 1
-            # maintain the empty_cells
-            lost_cell = (self.snake[-1].rect.center[0], self.snake[-1].rect.center[1])
-            if lost_cell in self.empty_cells:
-                self.empty_cells.pop(lost_cell)
 
-            got_cel = (self.snake[0].rect.center[0] - self.snake[0].direction[0] * GRID_SIZE, 
-                        self.snake[0].rect.center[1] - self.snake[0].direction[1] * GRID_SIZE)
-            self.empty_cells[got_cel] = 1
-
-            for i in range(0, len(self.snake) - 1):
-                self.snake[i].direction = self.snake[i + 1].direction
-        # check if eat the food
-        if self.food.pos == self.snake[-1].rect.center:
+            # check if eat the food
             x = self.snake[-1].rect.center[0] + self.snake[-1].direction[0] * GRID_SIZE
             y = self.snake[-1].rect.center[1] + self.snake[-1].direction[1] * GRID_SIZE
-            self.snake[-1].image.fill(BODY_COLOR)
-            self.snake.append(Snake(self, (x, y), self.snake[-1].direction))
-            self.snake[-1].image.fill(HEAD_COLOR)
-            x = random.randint(0, len(self.empty_cells))
-            food_pos = list(self.empty_cells.keys())[x]
-            self.food.kill()
-            self.food = Food(self, food_pos)
+            if self.food.pos == (x, y):
+                self.score += 1
+                self.snake[-1].image.fill(BODY_COLOR)
+                self.snake.append(Snake(self, (x, y), self.snake[-1].direction))
+                self.snake[-1].image.fill(HEAD_COLOR)
+                x = random.randint(0, len(self.empty_cells))
+                food_pos = list(self.empty_cells.keys())[x]
+                self.food.kill()
+                self.food = Food(self, food_pos)
+                self.empty_cells.pop(food_pos)
+            else:
+                self.all_sprites.update()
+                self.if_moved = 1
+                # maintain the empty_cells
+                lost_cell = (self.snake[-1].rect.center[0], self.snake[-1].rect.center[1])
+                if lost_cell in self.empty_cells:
+                    self.empty_cells.pop(lost_cell)
+                else:
+                    #collides
+                    self.playing = False
+                    self.food.kill() 
+
+                got_cel = (self.snake[0].rect.center[0] - self.snake[0].direction[0] * GRID_SIZE, 
+                            self.snake[0].rect.center[1] - self.snake[0].direction[1] * GRID_SIZE)
+                self.empty_cells[got_cel] = 1
+
+                for i in range(0, len(self.snake) - 1):
+                    self.snake[i].direction = self.snake[i + 1].direction
         
-        # check if collides
+        # check if out of range
         x = self.snake[-1].rect.center[0]
         y = self.snake[-1].rect.center[1]
-        if (x, y) in self.empty_cells == False or x < 0 or x > WIDTH or y < BLANK_SIZE or y > BLANK_SIZE + self.rows * GRID_SIZE:
+
+        if  x < 0 or x > WIDTH or y < BLANK_SIZE or y > BLANK_SIZE + self.rows * GRID_SIZE:
             self.playing = False
             self.food.kill()
+
     
     def events(self):
         for event in pg.event.get():
@@ -142,7 +155,8 @@ class Game:
                     self.snake[-1].direction = [-1, 0]
                 elif event.key == pg.K_RIGHT and self.snake[-1].direction != [-1, 0]:
                     self.snake[-1].direction = [1, 0]    
-                
+            if event.type == pg.KEYDOWN and event.key == pg.K_q:
+                self.pause = not self.pause
 
     def draw(self):
         self.screen.fill(BLACK)
@@ -158,9 +172,9 @@ class Game:
                 x = i * GRID_SIZE
                 y = BLANK_SIZE + j * GRID_SIZE
                 if (x + GRID_SIZE // 2, y + GRID_SIZE // 2 ) in self.empty_cells:
-                    pg.draw.rect(self.screen, LIGHTBLUE, (x, y, GRID_SIZE, GRID_SIZE))
+                    pg.draw.rect(self.screen, LIGHTBLUE, (x, y, GRID_SIZE, GRID_SIZE // 2))
                 else:
-                    pg.draw.rect(self.screen, WHITE, (x, y, GRID_SIZE, GRID_SIZE))
+                    pg.draw.rect(self.screen, BLACK, (x, y, GRID_SIZE, GRID_SIZE // 2))
 
     def draw_text(self, text, size, color, x, y):
         font = pg.font.Font(self.font_name, size)
@@ -177,9 +191,6 @@ class Game:
 
         for i in range(0, m):
             pg.draw.line(self.screen, LINE_COLOR, (i * GRID_SIZE, BLANK_SIZE), (i * GRID_SIZE, (n - 1) * GRID_SIZE + BLANK_SIZE), 1)
-
-
-
 
 if __name__ == '__main__':
 
