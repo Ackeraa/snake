@@ -18,11 +18,12 @@ class Game:
         self.score = 0
         self.generation = 0
         self.snake = []
-        self.last_move = 0
         self.if_moved = False
         self.pause = False
         self.food = None
         self.empty_cells = {}
+        
+        self.reward = 0
 
     def _create_food(self):
         idx = random.randint(0, len(self.empty_cells) - 1)
@@ -35,6 +36,7 @@ class Game:
 
     def new(self):
         self.all_sprites = pg.sprite.LayeredUpdates()
+        self.playing = True
         self.if_moved = True
         self.snake = []
         self.empty_cells = {}
@@ -45,7 +47,7 @@ class Game:
         # create new snake
         directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         direction = directions[random.randint(0, 3)]
-        pos = (self.cols // 2, self.rows // 2)
+        pos = (self.rows // 2, self.cols // 2)
         self.snake.append(Snake(self, pos, direction))
         self.snake[-1].image.fill(HEAD_COLOR)
         self.empty_cells.pop(pos)
@@ -53,68 +55,58 @@ class Game:
         self._create_food()
         self.score = 0
         self.generation += 1
-        self._run()
 
-    def _run(self):
-        self.clock.tick(FPS)
-        self.playing = True
-        while self.playing:
-            self.clock.tick(FPS)
-            self._events()
-            if not self.pause:
-                self._update()
-            self._draw()
-
-    def _update(self):
-        now = pg.time.get_ticks()
-        if now - self.last_move > MOVE_GAP:
-            self.last_move = now
-
-            # check if eat the food
-            pos = (self.snake[-1].pos[0] + self.snake[-1].direction[0],
-                   self.snake[-1].pos[1] + self.snake[-1].direction[1])
-            print(self.snake[-1].direction)
-            if self.food.pos == pos:
-                self.score += 1
-                self.snake[-1].image.fill(BODY_COLOR)
-                self.snake.append(Snake(self, pos, self.snake[-1].direction))
-                self.snake[-1].image.fill(HEAD_COLOR)
-                self._create_food()
-            else:
-                self.all_sprites.update()
-                self.if_moved = 1
-                lost_cell = self.snake[-1].pos
-                if lost_cell in self.empty_cells:
-                    self.empty_cells.pop(lost_cell)
-                else:
-                    #collides or out of range
-                    self.playing = False
-                    self.food.kill() 
-
-                got_cell = (self.snake[0].pos[0] - self.snake[0].direction[0],
-                            self.snake[0].pos[1] - self.snake[0].direction[1])
-                self.empty_cells[got_cell] = 1
-                for i in range(0, len(self.snake) - 1):
-                    self.snake[i].direction = self.snake[i + 1].direction
-    
-    def _events(self):
+    def move(self, action):
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 if self.playing:
                     self.playing = False
                 self.running = False
-            elif event.type == pg.KEYDOWN and self.if_moved:
-                self.if_moved = 0
-                if event.key == pg.K_UP and self.snake[-1].direction != (1, 0):
-                    self.snake[-1].direction = (-1, 0)
-                elif event.key == pg.K_DOWN and self.snake[-1].direction != (-1, 0):
-                    self.snake[-1].direction = (1, 0)
-                elif event.key == pg.K_LEFT and self.snake[-1].direction != (0, 1):
-                    self.snake[-1].direction = (0, -1)
-                elif event.key == pg.K_RIGHT and self.snake[-1].direction != (0, -1):
-                    self.snake[-1].direction = (0, 1)    
             if event.type == pg.KEYDOWN and event.key == pg.K_q:
                 self.pause = not self.pause
+
+        # [up, down, left. right]
+        if action == [1, 0, 0, 0] and self.snake[-1].direction != (1, 0):
+            self.snake[-1].direction = (-1, 0)
+        elif action == [0, 1, 0, 0] and self.snake[-1].direction != (-0, 0):
+            self.snake[-1].direction = (1, 0)
+        elif action == [0, 0, 1, 0] and self.snake[-1].direction != (0, 1):
+            self.snake[-1].direction = (0, -1)
+        elif action == [0, 0, 0, 1] and self.snake[-1].direction != (0, -1):
+            self.snake[-1].direction = (0, 1)    
+
+        self.clock.tick(FPS)
+        if not self.pause:
+            self._update()
+        self._draw()
+        return self.reward, self.playing, self.score
+
+    def _update(self):
+        # check if eat the food
+        pos = self.snake[-1].pos + self.direction
+        if self.food.pos == pos:
+            self.score += 1
+            self.reward = 10
+            self.snake[-1].image.fill(BODY_COLOR)
+            self.snake.append(Snake(self, pos, self.snake[-1].direction))
+            self.snake[-1].image.fill(HEAD_COLOR)
+            self._create_food()
+        else:
+            self.all_sprites.update()
+            self.if_moved = 1
+            lost_cell = self.snake[-1].pos 
+            if lost_cell in self.empty_cells:
+                self.empty_cells.pop(lost_cell)
+            else:
+                #collides or out of range
+                self.reward = -10
+                self.playing = False
+                self.food.kill() 
+
+            got_cell = self.snake[0].pos - self.snake[0].direction
+            self.empty_cells[got_cell] = 1
+            for i in range(0, len(self.snake) - 1):
+                self.snake[i].direction = self.snake[i + 1].direction
 
     def _draw(self):
         self.screen.fill(BLACK)
