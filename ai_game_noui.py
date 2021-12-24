@@ -1,17 +1,29 @@
 import random
-import pygame as pg
-from os import path
+from random import choice, randrange
 from settings import *
-from sprites import *
 import numpy as np
+
+def get_xy(pos):
+    x = pos[1] * GRID_SIZE + GRID_SIZE // 2 
+    y = pos[0] * GRID_SIZE + GRID_SIZE // 2 + BLANK_SIZE
+    return (x, y)
+
+class Snake():
+    def __init__(self, pos, direction):
+        self.pos = pos
+        self.direction = direction
+        self.last_move = 0
+
+    def update(self):
+        self.pos = (self.pos[0] + self.direction[0],
+                    self.pos[1] + self.direction[1])
+
+class Food():
+    def __init__(self, pos):
+        self.pos = pos
 
 class Game:
     def __init__(self):
-        pg.init()
-        self.screen = pg.display.set_mode((WIDTH, HEIGHT))
-        pg.display.set_caption(TITLE)
-        self.clock = pg.time.Clock()
-        self.font_name = pg.font.match_font(FONT_NAME)
         self.rows = (HEIGHT - BLANK_SIZE * 2) // GRID_SIZE
         self.cols = WIDTH // GRID_SIZE
 
@@ -28,12 +40,9 @@ class Game:
         idx = random.randint(0, len(self.empty_cells) - 1)
         pos = list(self.empty_cells.keys())[idx]
         self.empty_cells.pop(pos)
-        if self.food is not None:
-            self.food.kill()
-        self.food = Food(self, pos)
+        self.food = Food(pos)
 
     def new(self):
-        self.all_sprites = pg.sprite.LayeredUpdates()
         self.playing = True
         self.iter = 0
         self.snake = []
@@ -46,8 +55,7 @@ class Game:
         directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         direction = directions[random.randint(0, 3)]
         pos = (self.rows // 2, self.cols // 2)
-        self.snake.append(Snake(self, pos, direction))
-        self.snake[-1].image.fill(HEAD_COLOR)
+        self.snake.append(Snake(pos, direction))
         self.empty_cells.pop(pos)
 
         self._create_food()
@@ -55,11 +63,6 @@ class Game:
         self.generation += 1
 
     def move(self, action):
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                quit()
-
         '''
         # [up, down, left. right]
         #print(action)
@@ -78,23 +81,19 @@ class Game:
         dirs = [(-1, 0), (0, 1), (1, 0), (0, -1)]
         i = dirs.index(self.snake[-1].direction)
         if np.array_equal(action, [1, 0, 0]):
-            print("straight")
             # keep original direction
             pass
         elif np.array_equal(action, [0, 1, 0]):
             self.snake[-1].direction = dirs[(i - 1) % 4]
-            print("turn left")
         else:
             self.snake[-1].direction = dirs[(i + 1) % 4]
-            print("turn right")
 
         self._update()
-        self._draw()
-        self.clock.tick(FPS)
-        print("reward: ", self.reward, "playing: ", self.playing, "score: ", self.score)
+        #print("reward: ", self.reward, "playing: ", self.playing, "score: ", self.score)
         return self.reward, self.playing, self.score
 
     def _update(self):
+        #print(self.snake[-1].direction, self.snake[-1].pos, self.food.pos)
         self.reward = 0
         # check if eat the food
         pos = (self.snake[-1].pos[0] + self.snake[-1].direction[0],
@@ -102,18 +101,16 @@ class Game:
         if self.food.pos == pos:
             self.score += 1
             self.reward = 10
-            self.snake[-1].image.fill(BODY_COLOR)
-            self.snake.append(Snake(self, pos, self.snake[-1].direction))
-            self.snake[-1].image.fill(HEAD_COLOR)
+            self.snake.append(Snake(pos, self.snake[-1].direction))
             self._create_food()
         else:
-            self.all_sprites.update()
+            for snake in self.snake:
+                snake.update()
             lost_cell = self.snake[-1].pos 
             if not lost_cell in self.empty_cells or self.iter > 300 * len(self.snake):
                 #collides or out of range
                 self.reward = -10
                 self.playing = False
-                self.food.kill() 
             else:
                 self.empty_cells.pop(lost_cell)
 
@@ -123,33 +120,8 @@ class Game:
             for i in range(0, len(self.snake) - 1):
                 self.snake[i].direction = self.snake[i + 1].direction
 
-    def _draw(self):
-        self.screen.fill(BLACK)
-        self.all_sprites.draw(self.screen)
-        self._draw_text("score: " + str(self.score) + "     generation: " + str(self.generation), 30, WHITE, WIDTH / 2, 5)
-        self._draw_grid()
-        pg.display.flip()
-
-    def _draw_text(self, text, size, color, x, y):
-        font = pg.font.Font(self.font_name, size)
-        text_surface = font.render(text, True, color)
-        text_rect = text_surface.get_rect()
-        text_rect.midtop = (x, y)
-        self.screen.blit(text_surface, text_rect)
-    
-    def _draw_grid(self):
-        n = (HEIGHT - BLANK_SIZE) // GRID_SIZE + 1
-        m = WIDTH // GRID_SIZE
-        for i in range(0, n):
-            pg.draw.line(self.screen, LINE_COLOR, (0, i * GRID_SIZE + BLANK_SIZE), (WIDTH, i * GRID_SIZE + BLANK_SIZE), 1)
-
-        for i in range(0, m):
-            pg.draw.line(self.screen, LINE_COLOR, (i * GRID_SIZE, BLANK_SIZE), (i * GRID_SIZE, (n - 1) * GRID_SIZE + BLANK_SIZE), 1)
-
 if __name__ == '__main__':
-
-    g = Game() 
-    while g.running:
-        g.new()
-
-    pg.quit()
+    game = Game()
+    while True:
+        a = list(map(int, input().split()))
+        game.move(a)

@@ -73,7 +73,6 @@ class Game:
             # check if eat the food
             pos = (self.snake[-1].pos[0] + self.snake[-1].direction[0],
                    self.snake[-1].pos[1] + self.snake[-1].direction[1])
-            print(self.snake[-1].direction)
             if self.food.pos == pos:
                 self.score += 1
                 self.snake[-1].image.fill(BODY_COLOR)
