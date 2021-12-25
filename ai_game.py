@@ -17,11 +17,12 @@ class Game:
 
         self.score = 0
         self.generation = 0
+        self.reward = 0
+        self.iter = 0
         self.snake = []
         self.food = None
         self.empty_cells = {}
         
-        self.reward = 0
         self.new()
 
     def _create_food(self):
@@ -60,28 +61,16 @@ class Game:
                 pg.quit()
                 quit()
 
-        '''
-        # [up, down, left. right]
-        #print(action)
-        if action == [1, 0, 0, 0] and self.snake[-1].direction != (1, 0):
-            self.snake[-1].direction = (-1, 0)
-        elif action == [0, 1, 0, 0] and self.snake[-1].direction != (-1, 0):
-            self.snake[-1].direction = (1, 0)
-        elif action == [0, 0, 1, 0] and self.snake[-1].direction != (0, 1):
-            self.snake[-1].direction = (0, -1)
-        elif action == [0, 0, 0, 1] and self.snake[-1].direction != (0, -1):
-            self.snake[-1].direction = (0, 1)    
-        '''
-
         self.iter += 1
-        # [straight, left, right]
+        # 0: straight, 1: left, 2: right
+
         dirs = [(-1, 0), (0, 1), (1, 0), (0, -1)]
         i = dirs.index(self.snake[-1].direction)
-        if np.array_equal(action, [1, 0, 0]):
+        if action == 0:
             print("straight")
             # keep original direction
             pass
-        elif np.array_equal(action, [0, 1, 0]):
+        elif action == 1:
             self.snake[-1].direction = dirs[(i - 1) % 4]
             print("turn left")
         else:
@@ -93,6 +82,9 @@ class Game:
         self.clock.tick(FPS)
         print("reward: ", self.reward, "playing: ", self.playing, "score: ", self.score)
         return self.reward, self.playing, self.score
+
+    def get_state(self):
+        return None
 
     def _update(self):
         self.reward = 0
@@ -109,7 +101,7 @@ class Game:
         else:
             self.all_sprites.update()
             lost_cell = self.snake[-1].pos 
-            if not lost_cell in self.empty_cells or self.iter > 300 * len(self.snake):
+            if not lost_cell in self.empty_cells or self.iter > GAME_LOOP * len(self.snake):
                 #collides or out of range
                 self.reward = -10
                 self.playing = False
