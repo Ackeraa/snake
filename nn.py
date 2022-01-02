@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import random
 
 class Net(nn.Module):       
     def __init__(self, n_input, n_hidden1, n_hidden2, n_output):
@@ -20,8 +21,9 @@ class Net(nn.Module):
         y = self.fc1(x)
         y = self.relu(y)
         y = self.fc2(y)
-        y = self.sigmoid(y)
+        y = self.relu(y)
         y = self.out(y)
+        y = self.sigmoid(y)
         return y
 
     def update(self, weights):
@@ -30,12 +32,18 @@ class Net(nn.Module):
             x = self.a * self.b
             y = x + self.b * self.c
             z = y + self.c * self.d
-            self.fc1.weight.data = weights[0 : x].reshape(self.a, self.b)
-            self.fc2.weight.data = weights[x : y].reshape(self.b, self.c)
-            self.out.weight.data = weights[y : z].reshape(self.c, self.d)
+            xx = z + self.b
+            yy = xx + self.c
+            zz = yy + self.d
+            self.fc1.weight.data = weights[0 : x].reshape(self.b, self.a)
+            self.fc2.weight.data = weights[x : y].reshape(self.c, self.b)
+            self.out.weight.data = weights[y : z].reshape(self.d, self.c)
+            self.fc1.bias.data = weights[z : xx]
+            self.fc2.bias.data = weights[xx : yy]
+            self.out.bias.data = weights[yy : zz]
 
     def predict(self, input):
-        input = torch.tensor([input])
+        input = torch.tensor([input]).float()
         y = self(input)
         return torch.argmax(y, dim=1).tolist()[0]
 
@@ -44,9 +52,9 @@ class Net(nn.Module):
             print(parameters)
 
 if __name__ == '__main__':
-    model = Net(32, 20, 12, 4)
-    model = Net(2, 2, 2, 2)
-    weights = [1.0 for _ in range(16)]
-    model.update(weights)
-    input = [1.0, 2.0]
+    model = Net(2, 3, 4, 5)
+    weights = [1.0 for _ in range(2 * 3 * 4 * 5 + 3 + 4 + 5)]
+   # model.update(weights)
+    input = [random.random() for _ in range(2)]
     print(model.predict(input))
+    #model.show()
