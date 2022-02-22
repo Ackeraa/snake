@@ -28,7 +28,16 @@ class Net(nn.Module):
 
     def update(self, weights):
         with torch.no_grad():
-            weights = torch.FloatTensor(weights)
+            for i in range(len(weights)):
+                weights[i] = torch.FloatTensor(weights[i])
+            self.fc1.weight.data = weights[0].reshape(self.b, self.a)
+            self.fc2.weight.data = weights[1].reshape(self.c, self.b)
+            self.out.weight.data = weights[2].reshape(self.d, self.c)
+            self.fc1.bias.data = weights[3]
+            self.fc2.bias.data = weights[4]
+            self.out.bias.data = weights[5]
+        
+            '''
             x = self.a * self.b
             y = x + self.b * self.c
             z = y + self.c * self.d
@@ -41,6 +50,8 @@ class Net(nn.Module):
             self.fc1.bias.data = weights[z : xx]
             self.fc2.bias.data = weights[xx : yy]
             self.out.bias.data = weights[yy : zz]
+            '''
+        # self.show()
 
     def predict(self, input):
         input = torch.tensor([input]).float()
@@ -52,9 +63,11 @@ class Net(nn.Module):
             print(parameters)
 
 if __name__ == '__main__':
-    model = Net(2, 3, 4, 5)
-    weights = [1.0 for _ in range(2 * 3 * 4 * 5 + 3 + 4 + 5)]
-   # model.update(weights)
-    input = [random.random() for _ in range(2)]
+    model = Net(32, 20, 12, 4)
+    f = open('in.txt', 'r')
+    lines = f.readlines()
+    weights = [ float(lines[i]) for i in range(32 * 20 + 20 * 12 + 12 * 4 + 20 + 12 + 4)]
+    model.update(weights)
+    input = [random.random() for _ in range(32)]
     print(model.predict(input))
     #model.show()
