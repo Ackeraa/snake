@@ -1,10 +1,9 @@
 import random
 import pygame as pg
-from os import path
 from settings import *
-from sprites import *
 import numpy as np
-from nn import Net
+import os
+import torch
 
 class Game:
     def __init__(self, rows=ROWS, cols=COLS):
@@ -24,20 +23,34 @@ class Game:
         self.gap_steps = 0
         self.snake = []
         self.food = None
+        self.game_over = False
+        self.win = False
         self.direction = None
         self.available_places = {}
         
-        apple_seed = np.random.randint(-1000000000, 1000000000)
-        apple_seed = 112508161
-        self.rand_apple = random.Random(apple_seed)
 
-    def _place_food(self):
-        possible_places = sorted(list(self.available_places.keys()))
-        self.food = self.rand_apple.choice(possible_places)
-        self.available_places.pop(self.food)
+    def play(self, nn):
+        self._new()
+        while not self.game_over:
+            self._event()
+            state = self._get_state()
+            action = nn.predict(state)
+            self._move(action)
+            self._draw()
+
+        while self.game_over:        
+            self._event()
+
+    def play_saved_model(self, fname):
+        pth = os.path.join("model/best_individual", fname)
+        nn = torch.load(pth)
+        self.play(nn)
 
     def _new(self):
+        apple_seed = np.random.randint(-1000000000, 1000000000)
+        self.rand_apple = random.Random(apple_seed)
         self.game_over = False
+        self.win = False
         self.snake = []
         self.steps = 0
         self.gap_steps = 0
@@ -49,11 +62,8 @@ class Game:
         # create new snake
         x = random.randint(2, self.X - 3)
         y = random.randint(2, self.Y - 3)
-        x = 2
-        y = 3
         self.head = (x, y)
         direction = DIRECTIONS[random.randint(0, 3)]
-        direction = (1, 0)
         body1 = (self.head[0] - direction[0], self.head[1] - direction[1])
         body2 = (body1[0] - direction[0], body1[1] - direction[1])
         self.snake.append(self.head)
@@ -66,14 +76,34 @@ class Game:
         self.score = 0
         self.generation += 1    
 
-    def play(self, nn):
-        self._new()
-        while not self.game_over:
-            state = self._get_state()
-            action = nn.predict(state)
-            self._move(action)
-            self._draw()
-        self._draw()
+    def _place_food(self):
+        if len(self.available_places) == 0:
+            self.game_over = True
+            self.win = True
+            return 
+        possible_places = sorted(list(self.available_places.keys()))
+        self.food = self.rand_apple.choice(possible_places)
+        self.available_places.pop(self.food)
+
+    def _move(self, action):      
+        self.steps += 1
+        self.gap_steps += 1
+
+        self.direction = DIRECTIONS[action]
+        self.head = (self.head[0] + self.direction[0], self.head[1] + self.direction[1])
+        self.snake.insert(0, self.head)
+        
+        if self.head == self.food:
+            self.gap_steps = 0
+            self.score += 1
+            self._place_food()
+        else:
+            tail = self.snake.pop()
+            self.available_places[tail] = 1
+            if (not self.head in self.available_places) or (self.gap_steps > GAME_LOOP):
+                self.game_over = True  
+            else:
+                self.available_places.pop(self.head)
 
     def _get_state(self):
         # head direction
@@ -113,49 +143,8 @@ class Game:
                 y += dir[1]
             state += [1.0/dis, see_food, see_self]
         state += head_dir + tail_dir
+        
         return state
-
-    def _move(self, action):
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                quit()
-                
-        self.steps += 1
-        self.gap_steps += 1
-
-        self.direction = DIRECTIONS[action]
-        self.head = (self.head[0] + self.direction[0], self.head[1] + self.direction[1])
-        self.snake.insert(0, self.head)
-        
-        if self.head == self.food:
-            self.gap_steps = 0
-            self.score += 1
-            if self.score == self.X * self.Y - 3:
-                self.game_over = True
-                return
-            self._place_food()
-        else:
-            tail = self.snake.pop()
-            self.available_places[tail] = 1
-            if (not self.head in self.available_places) or (self.gap_steps > GAME_LOOP):
-                self.game_over = True  
-            else:
-                self.available_places.pop(self.head)
-        
-        self.clock.tick(FPS)
-
-    def play_nn(self):
-        genes = []
-        with open("genes.txt", "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                gene = list(map(float, line.split()))
-                genes.append(gene)
-
-        nn = Net(NET_STRUCT[0], NET_STRUCT[1], NET_STRUCT[2], NET_STRUCT[3])
-        nn.update(genes)
-        self.play(nn)
 
     def _get_xy(self, pos):
         x = pos[0] * GRID_SIZE
@@ -198,12 +187,17 @@ class Game:
             pg.draw.line(self.screen, LINE_COLOR, (0, i * GRID_SIZE + BLANK_SIZE), 
                          (self.width, i * GRID_SIZE + BLANK_SIZE), 1)
 
-
-
         pg.display.flip()
+
+    def _event(self):
+        self.clock.tick(FPS)
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                quit()
 
 if __name__ == '__main__':
 
     g = Game() 
-    g.play_nn()
+    g.play_saved_model("nn_55.pth")
     pg.quit()

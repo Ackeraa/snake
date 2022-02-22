@@ -14,21 +14,42 @@ class Game:
         self.food = None
         self.gap_steps = 0
         self.available_places = {}   
-        self.apple_seed = np.random.randint(-1000000000, 1000000000)
-        self.apple_seed = 112508161
-        self.rand_apple = random.Random(self.apple_seed)
+        self.game_over = False
+        self.win = False
+        self.apple_seed = None
+        self.rand_apple = None
+        self.uniq = None
 
-    def _place_food(self):
-        possible_places = sorted(list(self.available_places.keys()))
-        self.food = self.rand_apple.choice(possible_places)
-        self.available_places.pop(self.food)
+    def play(self, nn):
+        self._new()
+        while not self.game_over:
+            state = self._get_state()   
+            action = nn.predict(state)
+            self._move(action)
+
+    def play_nn(self):
+        genes = []
+        with open("genes.txt", "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                gene = list(map(float, line.split()))
+                genes.append(gene)
+
+        nn = Net(NET_STRUCT[0], NET_STRUCT[1], NET_STRUCT[2], NET_STRUCT[3])
+        nn.update(genes)
+        self.play(nn)
+        print(self.score)
 
     def _new(self):
         self.game_over = False
+        self.win = False
+        self.apple_seed = np.random.randint(-1000000000, 1000000000)
+        self.rand_apple = random.Random(self.apple_seed)
         self.snake = []
         self.steps = 0
         self.gap_steps = 0
         self.available_places = {}
+        self.uniq = [0] * (self.X * self.Y - 2)
         for x in range(self.X):
             for y in range(self.Y):
                 self.available_places[(x, y)] = 1
@@ -36,11 +57,8 @@ class Game:
         # create new snake
         x = random.randint(2, self.X - 3)
         y = random.randint(2, self.Y - 3)
-        # x = 2
-        # y = 3
         self.head = (x, y)
         direction = DIRECTIONS[random.randint(0, 3)]
-        # direction = (1, 0)
         body1 = (self.head[0] - direction[0], self.head[1] - direction[1])
         body2 = (body1[0] - direction[0], body1[1] - direction[1])
         self.snake.append(self.head)
@@ -53,13 +71,41 @@ class Game:
         self.score = 0
         self.generation += 1
 
-    def play(self, nn):
-        self._new()
-        while not self.game_over:
-            state = self._get_state()   
-            action = nn.predict(state)
-            self._move(action)
+    def _place_food(self):
+        if len(self.available_places) == 0:
+            self.game_over = True
+            self.win = True
+            return
+        possible_places = sorted(list(self.available_places.keys()))
+        self.food = self.rand_apple.choice(possible_places)
+        self.available_places.pop(self.food)
 
+    def _move(self, action):
+        self.steps += 1
+        self.gap_steps += 1
+
+        direction = DIRECTIONS[action]
+        self.head = (self.head[0] + direction[0], self.head[1] + direction[1])
+        self.snake.insert(0, self.head)
+        
+        if self.head == self.food:
+            self.gap_steps = 0
+            self.score += 1
+            self._place_food()
+        else:
+            tail = self.snake.pop()
+            self.available_places[tail] = 1
+            if not self.head in self.available_places:
+                self.game_over = True  
+            else:
+                self.available_places.pop(self.head)
+            
+            # infinate loop
+            if (self.head, self.food) not in self.uniq:
+                self.uniq.append((self.head,self.food))
+                del self.uniq[0]
+            else:
+                self.game_over = True
 
     def _get_state(self):
         # head direction
@@ -99,43 +145,8 @@ class Game:
                 y += dir[1]
             state += [1.0/dis, see_food, see_self]
         state += head_dir + tail_dir
+
         return state
-
-    def _move(self, action):
-        self.steps += 1
-        self.gap_steps += 1
-
-        direction = DIRECTIONS[action]
-        self.head = (self.head[0] + direction[0], self.head[1] + direction[1])
-        self.snake.insert(0, self.head)
-        
-        if self.head == self.food:
-            self.gap_steps = 0
-            self.score += 1
-            if self.score == self.X * self.Y - 3:
-                self.game_over = True
-                return
-            self._place_food()
-        else:
-            tail = self.snake.pop()
-            self.available_places[tail] = 1
-            if (not self.head in self.available_places) or (self.gap_steps > GAME_LOOP):
-                self.game_over = True  
-            else:
-                self.available_places.pop(self.head)
-            
-    def play_nn(self):
-        genes = []
-        with open("genes.txt", "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                gene = list(map(float, line.split()))
-                genes.append(gene)
-
-        nn = Net(NET_STRUCT[0], NET_STRUCT[1], NET_STRUCT[2], NET_STRUCT[3])
-        nn.update(genes)
-        self.play(nn)
-        print(self.score)
 
 if __name__ == '__main__':
     game = Game()

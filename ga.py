@@ -178,7 +178,6 @@ class GA:
                 f.write("\n")
 
 if __name__ == '__main__':
-    random.seed()
     ga = GA()
     ga.generate_ancestor()
     game = Game()
