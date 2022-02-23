@@ -1,9 +1,6 @@
 import random
 import pygame as pg
-from os import path
 from settings import *
-from sprites import *
-import numpy as np
 
 class Game:
     def __init__(self, rows=ROWS, cols=COLS):
@@ -18,104 +15,70 @@ class Game:
         self.font_name = pg.font.match_font(FONT_NAME)
 
         self.score = 0
-        self.generation = 0
         self.step = 0
-        self.gap_steps = 0
         self.snake = []
         self.food = None
         self.direction = None
         self.available_places = {}
+        self.game_over = False
+        self.win = False
+        self.playing = True
 
-    def _place_food(self):
-        self.food = random.choice(list(self.available_places.keys()))
-        self.available_places.pop(self.food)
+    def play(self):
+        while self.playing:
+            self._new()
+            while not self.game_over:
+                self._event()
+                self._move()
+                self._draw()
 
     def _new(self):
         self.game_over = False
+        self.win = False
         self.snake = []
         self.steps = 0
-        self.gap_steps = 0
+        self.score = 0
         self.available_places = {}
-        for i in range(self.rows):
-            for j in range(self.cols):
+        for i in range(self.X):
+            for j in range(self.Y):
                 self.available_places[(i, j)] = 1
 
         # create new snake
+        x = random.randint(2, self.X - 3)
+        y = random.randint(2, self.Y - 3)
+        self.head = (x, y)
         self.direction = DIRECTIONS[random.randint(0, 3)]
-        self.head = (self.cols // 2, self.rows // 2)
-        body = (self.head[0] - self.direction[0], self.head[1] - self.direction[1])
+        body1 = (self.head[0] - self.direction[0], self.head[1] - self.direction[1])
+        body2 = (body1[0] - self.direction[0], body1[1] - self.direction[1])
         self.snake.append(self.head)
-        self.snake.append(body)
+        self.snake.append(body1)
+        self.snake.append(body2)
         self.available_places.pop(self.head)
-        self.available_places.pop(body)
+        self.available_places.pop(body1)
+        self.available_places.pop(body2)
 
         self._place_food()
-        self.score = 0
-        self.generation += 1
 
-    def play(self):
-        self._new()
-        while not self.game_over:
-            state = self._get_state()
-            #action = nn.predict(state)
-            action = int(input())
-            self._move(action)
-            self._draw()
+    def _place_food(self):
+        if len(self.available_places) == 0:
+            self.game_over = True
+            self.win = True
+            return
+        self.food = random.choice(list(self.available_places.keys()))
+        self.available_places.pop(self.food)
 
-    def _get_state(self):
-        # head direction
-        i = DIRECTIONS.index(self.direction)
-        head_dir = [0, 0, 0, 0]
-        head_dir[i] = 1
-
-        state = head_dir 
-        # vision
-        dirs = [[1, 0], [1, 1], [0, 1], [-1, 1], 
-                [-1, 0], [-1, -1], [0, -1], [1, -1]]
-        
-        for dir in dirs:
-            r = self.head[0] + dir[0]
-            c = self.head[1] + dir[1]
-            dis = 0
-            dis_to_food = 0
-            dis_to_body = 1
-            see_body = False
-            while r < self.rows and r >= 0 and c < self.cols and c >= 0:
-                if self.food == (r, c):
-                    dis_to_food = 1 - dis / (self.rows - 1)
-                elif (not (r, c) in self.available_places) and (not see_body):
-                    see_body = True
-                    dis_to_body = dis / (self.rows - 1)
-                dis += 1.0
-                r += dir[0]
-                c += dir[1]
-            dis_to_wall = dis / self.rows
-            state += [dis_to_wall, dis_to_body, dis_to_food]
-
-        #print(state)
-        return state
-
-    def _move(self, action):
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                quit()
-
+    def _move(self):
         self.steps += 1
-        self.gap_steps += 1
-
-        self.direction = DIRECTIONS[action]
         self.head = (self.head[0] + self.direction[0], self.head[1] + self.direction[1])
         self.snake.insert(0, self.head)
         
         if self.head == self.food:
-            self.gap_steps = 0
             self.score += 1
             self._place_food()
         else:
             tail = self.snake.pop()
             self.available_places[tail] = 1
-            if (not self.head in self.available_places) or (self.gap_steps > GAME_LOOP):
+            if not self.head in self.available_places:
                 self.game_over = True  
             else:
                 self.available_places.pop(self.head)
@@ -130,8 +93,13 @@ class Game:
     def _draw(self):
         self.screen.fill(BLACK)
         
-        # draw snake
-        for s in self.snake:
+        # draw head
+        x, y = self._get_xy(self.snake[0])
+        pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+        pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+
+        # draw body
+        for s in self.snake[1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
@@ -141,7 +109,7 @@ class Game:
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
         # draw text
-        text = "score: " + str(self.score) + "     generation: " + str(self.generation)
+        text = "score: " + str(self.score)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
         text_rect = text_surface.get_rect()
@@ -160,6 +128,22 @@ class Game:
                          (i * GRID_SIZE, (n - 1) * GRID_SIZE + BLANK_SIZE), 1)
 
         pg.display.flip()
+
+    def _event(self):
+        self.clock.tick(FPS)
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                self.game_over  = True
+                self.playing = False
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_UP and self.direction != (1, 0):
+                    self.direction = (-1, 0)
+                elif event.key == pg.K_DOWN and self.direction != (-1, 0):
+                    self.direction = (1, 0)
+                elif event.key == pg.K_LEFT and self.direction != (0, 1):
+                    self.direction = (0, -1)
+                elif event.key == pg.K_RIGHT and self.direction != (0, -1):
+                    self.direction = (0, 1)    
 
 if __name__ == '__main__':
 

@@ -1,24 +1,20 @@
-from email.errors import FirstHeaderLineIsContinuationDefect
 import random
 from settings import *
 import numpy as np
-from nn import Net
 
 class Game:
     def __init__(self, rows=ROWS, cols=COLS):
         self.Y = rows
         self.X = cols
         self.score = 0
-        self.generation = 0
         self.snake = []
         self.food = None
-        self.gap_steps = 0
         self.available_places = {}   
         self.game_over = False
         self.win = False
-        self.apple_seed = None
-        self.rand_apple = None
         self.uniq = None
+        self.seed = np.random.randint(-1000000000, 1000000000)
+        self.rand = random.Random(self.seed)
 
     def play(self, nn):
         self._new()
@@ -27,27 +23,12 @@ class Game:
             action = nn.predict(state)
             self._move(action)
 
-    def play_nn(self):
-        genes = []
-        with open("genes.txt", "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                gene = list(map(float, line.split()))
-                genes.append(gene)
-
-        nn = Net(NET_STRUCT[0], NET_STRUCT[1], NET_STRUCT[2], NET_STRUCT[3])
-        nn.update(genes)
-        self.play(nn)
-        print(self.score)
-
     def _new(self):
         self.game_over = False
         self.win = False
-        self.apple_seed = np.random.randint(-1000000000, 1000000000)
-        self.rand_apple = random.Random(self.apple_seed)
         self.snake = []
         self.steps = 0
-        self.gap_steps = 0
+        self.score = 0
         self.available_places = {}
         self.uniq = [0] * (self.X * self.Y - 2)
         for x in range(self.X):
@@ -55,10 +36,10 @@ class Game:
                 self.available_places[(x, y)] = 1
 
         # create new snake
-        x = random.randint(2, self.X - 3)
-        y = random.randint(2, self.Y - 3)
+        x = self.rand.randint(2, self.X - 3)
+        y = self.rand.randint(2, self.Y - 3)
         self.head = (x, y)
-        direction = DIRECTIONS[random.randint(0, 3)]
+        direction = DIRECTIONS[self.rand.randint(0, 3)]
         body1 = (self.head[0] - direction[0], self.head[1] - direction[1])
         body2 = (body1[0] - direction[0], body1[1] - direction[1])
         self.snake.append(self.head)
@@ -68,8 +49,7 @@ class Game:
         self.available_places.pop(body1)
         self.available_places.pop(body2)
         self._place_food()
-        self.score = 0
-        self.generation += 1
+
 
     def _place_food(self):
         if len(self.available_places) == 0:
@@ -77,19 +57,17 @@ class Game:
             self.win = True
             return
         possible_places = sorted(list(self.available_places.keys()))
-        self.food = self.rand_apple.choice(possible_places)
+        self.food = self.rand.choice(possible_places)
         self.available_places.pop(self.food)
 
     def _move(self, action):
         self.steps += 1
-        self.gap_steps += 1
 
         direction = DIRECTIONS[action]
         self.head = (self.head[0] + direction[0], self.head[1] + direction[1])
         self.snake.insert(0, self.head)
         
         if self.head == self.food:
-            self.gap_steps = 0
             self.score += 1
             self._place_food()
         else:
@@ -150,5 +128,5 @@ class Game:
 
 if __name__ == '__main__':
     game = Game()
-    game.play_nn()
+    game.find_finished_game(97)
 

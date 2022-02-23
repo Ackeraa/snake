@@ -22,6 +22,7 @@ class Individual:
         score = game.score
         self.score = score
         self.steps = steps
+        self.seed = game.seed
 
         self.fitness = steps + (2 ** score + 500 * (score ** 2.1)) - (((0.25 * steps) ** 1.3) * (score ** 1.2))
         self.fitness = max(self.fitness, 0.1)
@@ -45,7 +46,7 @@ class GA:
     # load genes(nn model parameters) from file.
     def inherit_ancestor(self):
         for i in range(self.p_size):
-            pth = os.path.join("model/all_individual", str(i)+"_nn.pth")
+            pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
             nn = torch.load(pth)
             genes = []
             with torch.no_grad():
@@ -90,7 +91,7 @@ class GA:
         for individual in self.population:
             individual.get_fitness()
             sum_score += individual.score
-        self.avg_score = sum_score / self.genes_len
+        self.avg_score = sum_score / len(self.population)
         self.population = self.elitism_selection(self.p_size)
         self.best_individual = self.population[0]
         random.shuffle(self.population)
@@ -108,35 +109,37 @@ class GA:
         random.shuffle(children)
         self.population.extend(children)
 
-    def save_best(self, fname="nn.pth"):
-        pth= os.path.join("model/best_individual", fname)
-        torch.save(self.best_individual.nn, pth)
+    def save_best(self, score):
+        model_pth= os.path.join("model", "best_individual2", "nn_"+str(score)+".pth")
+        torch.save(self.best_individual.nn, model_pth)
+        seed_pth = os.path.join("seed", "seed_"+str(score)+".txt")
+        with open(seed_pth, "w") as f:
+            f.write(str(self.best_individual.seed)) 
     
     def save_all(self):
         for individual in self.population:
             individual.get_fitness()
-        self.population = self.elitism_selection(self.p_size)
-        for i in range(len(self.population)):
-            pth = os.path.join("model/all_individual", str(i)+"_nn.pth")
-            torch.save(self.population[i].nn, pth)
+        population = self.elitism_selection(self.p_size)
+        for i in range(len(population)):
+            pth = os.path.join("model", "all_individual2", str(i)+"_nn.pth")
+            torch.save(population[i].nn, pth)
 
 if __name__ == '__main__':
     ga = GA()
-    #ga.generate_ancestor()
-    ga.inherit_ancestor()
+    ga.generate_ancestor()
+    #ga.inherit_ancestor()
     game = Game()
-    loop = 0
+    generation = 0
     record = 0
     while True:
-        loop += 1
+        generation += 1
         ga.evolve()
-        #best_individual = ga.best_individual
-        #game.play(best_individual.nn)
-        print("generation:", loop, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
+        print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score
-            ga.save_best(fname="nn_"+str(record)+".pth")
-        if loop % 20 == 0:
-            ga.save_all()
+            ga.save_best(ga.best_individual.score)
+            # game.play(ga.best_individual.nn, ga.best_individual.seed, loop)
+        # if generation % 20 == 0:
+        #     ga.save_all()
 
 

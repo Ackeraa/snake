@@ -18,7 +18,7 @@ class Game:
         self.font_name = pg.font.match_font(FONT_NAME)
 
         self.score = 0
-        self.generation = 533
+        self.generation = 0
         self.step = 0
         self.gap_steps = 0
         self.snake = []
@@ -27,9 +27,10 @@ class Game:
         self.win = False
         self.direction = None
         self.available_places = {}
-        
 
-    def play(self, nn):
+    def play(self, nn, seed=None, generation=0):
+        self.rand = random.Random(seed)
+        self.generation = generation
         self._new()
         while not self.game_over:
             self._event()
@@ -38,17 +39,20 @@ class Game:
             self._move(action)
             self._draw()
 
-        while self.game_over:        
-            self._event()
+        # while self.game_over:        
+        #     self._event()
 
-    def play_saved_model(self, fname):
-        pth = os.path.join("model/best_individual", fname)
-        nn = torch.load(pth)
-        self.play(nn)
+    def play_saved_model(self, score):
+        model_pth = os.path.join("model", "best_individual2", "nn_"+str(score)+'.pth')
+        nn = torch.load(model_pth)
+
+        seed_pth = os.path.join("seed", "seed_"+str(score)+'.txt')
+        with open(seed_pth, "r") as f:
+            seed = int(f.read())
+        print(seed)
+        self.play(nn, seed)
 
     def _new(self):
-        apple_seed = np.random.randint(-1000000000, 1000000000)
-        self.rand_apple = random.Random(apple_seed)
         self.game_over = False
         self.win = False
         self.snake = []
@@ -60,10 +64,10 @@ class Game:
                 self.available_places[(x, y)] = 1
 
         # create new snake
-        x = random.randint(2, self.X - 3)
-        y = random.randint(2, self.Y - 3)
+        x = self.rand.randint(2, self.X - 3)
+        y = self.rand.randint(2, self.Y - 3)
         self.head = (x, y)
-        direction = DIRECTIONS[random.randint(0, 3)]
+        direction = DIRECTIONS[self.rand.randint(0, 3)]
         body1 = (self.head[0] - direction[0], self.head[1] - direction[1])
         body2 = (body1[0] - direction[0], body1[1] - direction[1])
         self.snake.append(self.head)
@@ -74,7 +78,7 @@ class Game:
         self.available_places.pop(body2)
         self._place_food()
         self.score = 0
-        self.generation += 1    
+  
 
     def _place_food(self):
         if len(self.available_places) == 0:
@@ -82,7 +86,7 @@ class Game:
             self.win = True
             return 
         possible_places = sorted(list(self.available_places.keys()))
-        self.food = self.rand_apple.choice(possible_places)
+        self.food = self.rand.choice(possible_places)
         self.available_places.pop(self.food)
 
     def _move(self, action):      
@@ -199,5 +203,5 @@ class Game:
 if __name__ == '__main__':
 
     g = Game() 
-    g.play_saved_model("nn_55.pth")
+    g.play_saved_model(97)
     pg.quit()
