@@ -13,7 +13,7 @@ class Game:
         self.game_over = False
         self.win = False
         self.uniq = None
-        self.seed = np.random.randint(-1000000000, 1000000000)
+        self.seed = random.randint(-1000000000, 1000000000)
         self.rand = random.Random(self.seed)
 
     def play(self, nn):

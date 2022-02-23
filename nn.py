@@ -3,55 +3,35 @@ import torch.nn as nn
 import random
 
 class Net(nn.Module):       
-    def __init__(self, n_input, n_hidden1, n_hidden2, n_output):
+    def __init__(self, n_input, n_hidden, n_output):
         super(Net, self).__init__()
 
         self.a = n_input
-        self.b = n_hidden1
-        self.c = n_hidden2
-        self.d = n_output
+        self.b = n_hidden
+        self.c = n_output
 
-        self.fc1 = nn.Linear(n_input, n_hidden1)
-        self.fc2 = nn.Linear(n_hidden1, n_hidden2)
-        self.out = nn.Linear(n_hidden2, n_output)
+        self.fc = nn.Linear(n_input, n_hidden)
+        self.out = nn.Linear(n_hidden, n_output)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        y = self.fc1(x)
-        y = self.relu(y)
-        y = self.fc2(y)
+        y = self.fc(x)
         y = self.relu(y)
         y = self.out(y)
         y = self.sigmoid(y)
         return y
 
     def update(self, weights):
+        weights = torch.FloatTensor(weights)
         with torch.no_grad():
-            for i in range(len(weights)):
-                weights[i] = torch.FloatTensor(weights[i])
-            self.fc1.weight.data = weights[0].reshape(self.b, self.a)
-            self.fc2.weight.data = weights[1].reshape(self.c, self.b)
-            self.out.weight.data = weights[2].reshape(self.d, self.c)
-            self.fc1.bias.data = weights[3]
-            self.fc2.bias.data = weights[4]
-            self.out.bias.data = weights[5]
-        
-            '''
             x = self.a * self.b
-            y = x + self.b * self.c
-            z = y + self.c * self.d
-            xx = z + self.b
-            yy = xx + self.c
-            zz = yy + self.d
-            self.fc1.weight.data = weights[0 : x].reshape(self.b, self.a)
-            self.fc2.weight.data = weights[x : y].reshape(self.c, self.b)
-            self.out.weight.data = weights[y : z].reshape(self.d, self.c)
-            self.fc1.bias.data = weights[z : xx]
-            self.fc2.bias.data = weights[xx : yy]
-            self.out.bias.data = weights[yy : zz]
-            '''
-        # self.show()
+            y = x + self.b
+            z = y + self.b * self.c
+            self.fc.weight.data = weights[0:x].reshape(self.b, self.a)
+            self.fc.bias.data = weights[x:y]
+            self.out.weight.data = weights[y:z].reshape(self.c, self.b)
+            self.out.bias.data = weights[z:]
 
     def predict(self, input):
         input = torch.tensor([input]).float()
@@ -59,15 +39,15 @@ class Net(nn.Module):
         return torch.argmax(y, dim=1).tolist()[0]
 
     def show(self):
-        for parameters in self.parameters():
-            print(parameters)
+        with torch.no_grad():
+            for parameters in self.parameters():
+                print(parameters.numpy().flatten())
 
 if __name__ == '__main__':
-    model = Net(32, 20, 12, 4)
-    f = open('in.txt', 'r')
-    lines = f.readlines()
-    weights = [ float(lines[i]) for i in range(32 * 20 + 20 * 12 + 12 * 4 + 20 + 12 + 4)]
+    model = Net(32, 20, 4)
+
+    weights = [random.random() for i in range(32 * 20 + 20 * 4 + 20 + 4)]
     model.update(weights)
     input = [random.random() for _ in range(32)]
     print(model.predict(input))
-    #model.show()
+    model.show()

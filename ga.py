@@ -4,122 +4,69 @@ from nn import Net
 from ai_game import Game
 from ai_game_noui import Game as Game_Noui 
 from settings import *
-import copy
-
-record = 0
-best_fitness = 0
+import torch
+import os
 
 class Individual:
-    def __init__(self, genes, net_struct):
-        self.nn = Net(net_struct[0], net_struct[1], net_struct[2], net_struct[3])
+    def __init__(self, genes):
+        self.nn = Net(N_INPUT, N_HIDDEN, N_OUTPUT)
         self.genes = genes
         self.score = 0
         self.steps = 0
     
     def get_fitness(self):
-        self.nn.update(copy.deepcopy(self.genes))
+        self.nn.update(self.genes.copy())
         game = Game_Noui()
         game.play(self.nn)
         steps = game.steps
         score = game.score
         self.score = score
         self.steps = steps
-        # print("steps", steps, "score", score)
-        global record
-        global best_fitness
+        self.seed = game.seed
 
-        if score > record:
-            record = score
         self.fitness = steps + (2 ** score + 500 * (score ** 2.1)) - (((0.25 * steps) ** 1.3) * (score ** 1.2))
         self.fitness = max(self.fitness, 0.1)
-        if self.fitness > best_fitness:
-            best_fitness = self.fitness
+        self.fitness = (score+0.5+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
  
 class GA:
-    def __init__(self, p_size=P_SIZE, c_size=C_SIZE, mutate_rate=MUTATE_RATE, 
-                 cross_rate=CROSS_RATE, eta=ETA, scale=SCALE, net_struct=NET_STRUCT):
+    def __init__(self, p_size=P_SIZE, c_size=C_SIZE, genes_len=GENES_LEN, mutate_rate=MUTATE_RATE):
         self.p_size = p_size
         self.c_size = c_size
+        self.genes_len = genes_len
         self.mutate_rate = mutate_rate
-        self.cross_rate = cross_rate
-        self.eta = eta
-        self.scale = scale
         self.population = []
-        self.age = 0
-        self.net_struct = net_struct
         self.best_individual = None
-
-    def get_gene(self):
-        a, b, c, d = self.net_struct
-        lengths = [a * b, b * c, c * d, b, c, d]
-        genes = []
-        for l in lengths:
-            genes.append(np.random.uniform(-1, 1, l))
-        
-        return genes
+        self.avg_score = 0
 
     def generate_ancestor(self):
         for i in range(self.p_size):
-            genes = self.get_gene()
-            self.population.append(Individual(genes, self.net_struct))
+            genes = np.random.uniform(-1, 1, self.genes_len)
+            self.population.append(Individual(genes))
     
+    # load genes(nn model parameters) from file.
+    def inherit_ancestor(self):
+        for i in range(self.p_size):
+            pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
+            nn = torch.load(pth)
+            genes = []
+            with torch.no_grad():
+                for parameters in nn.parameters():
+                    genes.extend(parameters.numpy().flatten())
+            self.population.append(Individual(np.array(genes)))
+
     def crossover(self, c1_genes, c2_genes):
-        for i in range(2 * len(self.net_struct) - 2):
-            rand = np.random.random()
-            if rand < self.cross_rate:
-                c1_genes[i], c2_genes[i] = self.simulated_binary_crossover(c1_genes[i], c2_genes[i])
-            else:
-                c1_genes[i], c2_genes[i] = self.single_point_binary_crossover(c1_genes[i], c2_genes[i])
-        return c1_genes, c2_genes
+        p1_genes = c1_genes.copy()
+        p2_genes = c2_genes.copy()
 
-    def single_point_binary_crossover(self, c1_genes, c2_genes):
-        p1_genes = copy.deepcopy(c1_genes)
-        p2_genes = copy.deepcopy(c2_genes)
-        genes_len = len(p1_genes)
-
-        point = np.random.randint(0, genes_len)
+        point = np.random.randint(0, self.genes_len)
         c1_genes[:point + 1] = p2_genes[:point + 1]
         c2_genes[:point + 1] = p1_genes[:point + 1]
 
-        return c1_genes, c2_genes
-
-    def simulated_binary_crossover(self, c1_genes, c2_genes):
-        p1_genes = copy.deepcopy(c1_genes)
-        p2_genes = copy.deepcopy(c2_genes)
-        genes_len = len(p1_genes)
-
-        rand = np.random.random(genes_len)
-        gamma = np.empty(genes_len)
-
-        gamma[rand <= 0.5] = (2 * rand[rand <= 0.5]) ** (1.0 / (self.eta + 1))
-        gamma[rand > 0.5] = (1.0 / (2.0 * (1 - rand[rand > 0.5]))) ** (1.0 / (self.eta + 1))
-
-        c1_genes = 0.5 * ((1 + gamma) * p1_genes + (1 - gamma) * p2_genes)
-        c2_genes = 0.5 * ((1 - gamma) * p1_genes + (1 + gamma) * p2_genes)
-
-        return c1_genes, c2_genes
-
-    def mutate(self, c1_genes, c2_genes):
-        for i in range(2 * len(self.net_struct) - 2):
-            c1_genes[i] = self.gaussian_mutate(c1_genes[i])
-            c2_genes[i] = self.gaussian_mutate(c2_genes[i])
-        
-        return c1_genes, c2_genes
-
-    def gaussian_mutate(self, c_genes):  
+    def mutate(self, c_genes):  
         mutation_array = np.random.random(c_genes.shape) < self.mutate_rate
         mutation = np.random.normal(size=c_genes.shape)
-        mutation[mutation_array] *= self.scale
+        mutation[mutation_array] *= 0.2
         c_genes[mutation_array] += mutation[mutation_array]
-           
-        return c_genes
-
-    def clip(self, c1_genes, c2_genes):
-        for i in range(2 * len(self.net_struct) - 2):
-            np.clip(c1_genes[i], -1, 1, out=c1_genes[i])
-            np.clip(c2_genes[i], -1, 1, out=c2_genes[i])
-    
-        return c1_genes, c2_genes
 
     def elitism_selection(self, size):
         population = sorted(self.population, key =lambda individual: individual.fitness, reverse=True)
@@ -140,54 +87,59 @@ class GA:
         return selection
 
     def evolve(self):
-        self.age += 1
-        self.best_individual = self.population[0]
+        sum_score = 0
         for individual in self.population:
             individual.get_fitness()
-            if individual.fitness > self.best_individual.fitness:
-                self.best_individual = individual
-            if individual.score == 97:
-                self.save(individual, "final_genes.txt")
-                return
+            sum_score += individual.score
+        self.avg_score = sum_score / len(self.population)
         self.population = self.elitism_selection(self.p_size)
-
+        self.best_individual = self.population[0]
         random.shuffle(self.population)
 
         children = []
         while len(children) < self.c_size:
             p1, p2 = self.roulette_wheel_selection(2)
-            c1_genes, c2_genes = copy.deepcopy(p1.genes), copy.deepcopy(p2.genes)
-            c1_genes, c2_genes = self.crossover(c1_genes, c2_genes)
-            c1_genes, c2_genes = self.mutate(c1_genes, c2_genes)
-            c1_genes, c2_genes = self.clip(c1_genes, c2_genes)
-            c1 = Individual(c1_genes, self.net_struct)
-            c2 = Individual(c2_genes, self.net_struct)
+            c1_genes, c2_genes = p1.genes.copy(), p2.genes.copy()
+            self.crossover(c1_genes, c2_genes)
+            self.mutate(c1_genes)
+            self.mutate(c2_genes)
+            c1, c2 = Individual(c1_genes), Individual(c2_genes)
             children.extend([c1, c2])
 
         random.shuffle(children)
         self.population.extend(children)
 
-    def save(self, individual=None, fname="best_genes.txt"):
-        if individual is None:
-            individual = self.best_individual
-        genes = self.best_individual.genes
-        with open(fname, "w") as f:
-            for gene in genes:
-                for g in gene:
-                    f.write(str(g) + " ")
-                f.write("\n")
+    def save_best(self, score):
+        model_pth= os.path.join("model", "best_individual", "nn_"+str(score)+".pth")
+        torch.save(self.best_individual.nn, model_pth)
+        seed_pth = os.path.join("seed", "seed_"+str(score)+".txt")
+        with open(seed_pth, "w") as f:
+            f.write(str(self.best_individual.seed)) 
+    
+    def save_all(self):
+        for individual in self.population:
+            individual.get_fitness()
+        population = self.elitism_selection(self.p_size)
+        for i in range(len(population)):
+            pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
+            torch.save(population[i].nn, pth)
 
 if __name__ == '__main__':
     ga = GA()
     ga.generate_ancestor()
-    game = Game()
-    loop = 0
+    #ga.inherit_ancestor()
+    #game = Game()
+    generation = 0
+    record = 0
     while True:
+        generation += 1
         ga.evolve()
-        # nn = ga.best_individual.nn
-        # game.play(nn)
-        loop += 1
-        if loop % 20 == 0:
-            ga.save()
+        print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
+        if ga.best_individual.score >= record:
+            record = ga.best_individual.score
+            ga.save_best(ga.best_individual.score)
+            # game.play(ga.best_individual.nn, ga.best_individual.seed, loop)
+        if generation % 20 == 0:
+            ga.save_all()
 
-        print(loop, record)
+

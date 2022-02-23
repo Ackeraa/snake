@@ -43,13 +43,13 @@ class Game:
         #     self._event()
 
     def play_saved_model(self, score):
-        model_pth = os.path.join("model", "best_individual2", "nn_"+str(score)+'.pth')
+        model_pth = os.path.join("model", "best_individual", "nn_"+str(score)+'.pth')
         nn = torch.load(model_pth)
 
         seed_pth = os.path.join("seed", "seed_"+str(score)+'.txt')
         with open(seed_pth, "r") as f:
             seed = int(f.read())
-        print(seed)
+ 
         self.play(nn, seed)
 
     def _new(self):
@@ -203,5 +203,5 @@ class Game:
 if __name__ == '__main__':
 
     g = Game() 
-    g.play_saved_model(97)
+    g.play_saved_model(40)
     pg.quit()
