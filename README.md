@@ -1,6 +1,6 @@
 # Snake AI
 
-<img src="https://github.com/Ackeraa/snake/blob/master/snake.gif" style="zoom:2%;" />
+<img src="https://github.com/Ackeraa/snake/blob/master/snake.gif"  width="50%" height="50%" />
 
 使用遗传算法和简单神经网络实现贪吃蛇，其中
 * 遗传算法进化神经网络的参数
