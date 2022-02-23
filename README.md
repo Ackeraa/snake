@@ -1,5 +1,7 @@
 # Snake AI
 
+<img src="https://github.com/Ackeraa/snake/snake.gif" style="zoom:66%;" />
+
 使用遗传算法和简单神经网络实现贪吃蛇，其中
 * 遗传算法进化神经网络的参数
 * 神经网络预测移动方向

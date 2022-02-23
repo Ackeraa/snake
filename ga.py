@@ -24,9 +24,7 @@ class Individual:
         self.steps = steps
         self.seed = game.seed
 
-        self.fitness = steps + (2 ** score + 500 * (score ** 2.1)) - (((0.25 * steps) ** 1.3) * (score ** 1.2))
-        self.fitness = max(self.fitness, 0.1)
-        self.fitness = (score+0.5+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
+        self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
  
 class GA:
     def __init__(self, p_size=P_SIZE, c_size=C_SIZE, genes_len=GENES_LEN, mutate_rate=MUTATE_RATE):
@@ -126,8 +124,8 @@ class GA:
 
 if __name__ == '__main__':
     ga = GA()
-    # ga.generate_ancestor()
-    ga.inherit_ancestor()
+    ga.generate_ancestor()
+    # ga.inherit_ancestor()
     #game = Game()
     generation = 0
     record = 0
@@ -137,9 +135,9 @@ if __name__ == '__main__':
         print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score
-            ga.save_best(ga.best_individual.score)
+            # ga.save_best(ga.best_individual.score)
             # game.play(ga.best_individual.nn, ga.best_individual.seed, loop)
-        if generation % 20 == 0:
-            ga.save_all()
+        # if generation % 20 == 0:
+        #     ga.save_all()
 
 
