@@ -126,8 +126,8 @@ class GA:
 
 if __name__ == '__main__':
     ga = GA()
-    ga.generate_ancestor()
-    #ga.inherit_ancestor()
+    # ga.generate_ancestor()
+    ga.inherit_ancestor()
     #game = Game()
     generation = 0
     record = 0
