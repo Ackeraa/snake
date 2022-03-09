@@ -17,13 +17,13 @@ class Game:
         self.rand = random.Random(self.seed)
 
     def play(self, nn):
-        self._new()
+        self.new()
         while not self.game_over:
-            state = self._get_state()   
+            state = self.get_state()   
             action = nn.predict(state)
-            self._move(action)
+            self.move(action)
 
-    def _new(self):
+    def new(self):
         self.game_over = False
         self.win = False
         self.snake = []
@@ -48,10 +48,10 @@ class Game:
         self.available_places.pop(self.head)
         self.available_places.pop(body1)
         self.available_places.pop(body2)
-        self._place_food()
+        self.place_food()
 
 
-    def _place_food(self):
+    def place_food(self):
         if len(self.available_places) == 0:
             self.game_over = True
             self.win = True
@@ -60,7 +60,7 @@ class Game:
         self.food = self.rand.choice(possible_places)
         self.available_places.pop(self.food)
 
-    def _move(self, action):
+    def move(self, action):
         self.steps += 1
 
         direction = DIRECTIONS[action]
@@ -69,7 +69,7 @@ class Game:
         
         if self.head == self.food:
             self.score += 1
-            self._place_food()
+            self.place_food()
         else:
             tail = self.snake.pop()
             self.available_places[tail] = 1
@@ -85,7 +85,7 @@ class Game:
             else:
                 self.game_over = True
 
-    def _get_state(self):
+    def get_state(self):
         # head direction
         head_direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
         i = DIRECTIONS.index(head_direction)
@@ -128,5 +128,4 @@ class Game:
 
 if __name__ == '__main__':
     game = Game()
-    game.find_finished_game(97)
 

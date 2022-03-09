@@ -1,0 +1,2 @@
+# This file is used internally by FFMPEG.
+file 'file:/Users/gsx/MyProgram/Python/snake/movie/media/videos/a/1080p60/partial_movie_files/Fig2/450974505_3493041802_2095751204.mp4'

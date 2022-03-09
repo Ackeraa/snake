@@ -9,7 +9,7 @@ import os
 
 class Individual:
     def __init__(self, genes):
-        self.nn = Net(N_INPUT, N_HIDDEN, N_OUTPUT)
+        self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT)
         self.genes = genes
         self.score = 0
         self.steps = 0
@@ -108,7 +108,7 @@ class GA:
         self.population.extend(children)
 
     def save_best(self, score):
-        model_pth= os.path.join("model", "best_individual", "nn_"+str(score)+".pth")
+        model_pth= os.path.join("model", "best_individual", "nn20_"+str(score)+".pth")
         torch.save(self.best_individual.nn, model_pth)
         seed_pth = os.path.join("seed", "seed_"+str(score)+".txt")
         with open(seed_pth, "w") as f:
@@ -119,13 +119,13 @@ class GA:
             individual.get_fitness()
         population = self.elitism_selection(self.p_size)
         for i in range(len(population)):
-            pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
+            pth = os.path.join("model", "all_individual", str(i)+"_nn20.pth")
             torch.save(population[i].nn, pth)
 
 if __name__ == '__main__':
     ga = GA()
-    ga.generate_ancestor()
-    # ga.inherit_ancestor()
+    #ga.generate_ancestor()
+    ga.inherit_ancestor()
     #game = Game()
     generation = 0
     record = 0
@@ -134,10 +134,10 @@ if __name__ == '__main__':
         ga.evolve()
         print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
         if ga.best_individual.score >= record:
-            record = ga.best_individual.score
-            # ga.save_best(ga.best_individual.score)
+            record = ga.best_individual.score 
+            ga.save_best(ga.best_individual.score)
             # game.play(ga.best_individual.nn, ga.best_individual.seed, loop)
-        # if generation % 20 == 0:
-        #     ga.save_all()
+        if generation % 20 == 0:
+            ga.save_all()
 
 

@@ -20,7 +20,6 @@ class Game:
         self.score = 0
         self.generation = 0
         self.step = 0
-        self.gap_steps = 0
         self.snake = []
         self.food = None
         self.game_over = False
@@ -31,19 +30,19 @@ class Game:
     def play(self, nn, seed=None, generation=0):
         self.rand = random.Random(seed)
         self.generation = generation
-        self._new()
+        self.new()
         while not self.game_over:
             self._event()
-            state = self._get_state()
+            state = self.get_state()
             action = nn.predict(state)
-            self._move(action)
+            self.move(action)
             self._draw()
 
         # while self.game_over:        
         #     self._event()
 
     def play_saved_model(self, score):
-        model_pth = os.path.join("model", "best_individual", "nn_"+str(score)+'.pth')
+        model_pth = os.path.join("model", "best_individual", "nn20_"+str(score)+'.pth')
         nn = torch.load(model_pth)
 
         seed_pth = os.path.join("seed", "seed_"+str(score)+'.txt')
@@ -52,12 +51,11 @@ class Game:
  
         self.play(nn, seed)
 
-    def _new(self):
+    def new(self):
         self.game_over = False
         self.win = False
         self.snake = []
         self.steps = 0
-        self.gap_steps = 0
         self.available_places = {}
         for x in range(self.X):
             for y in range(self.Y):
@@ -76,11 +74,11 @@ class Game:
         self.available_places.pop(self.head)
         self.available_places.pop(body1)
         self.available_places.pop(body2)
-        self._place_food()
+        self.place_food()
         self.score = 0
   
 
-    def _place_food(self):
+    def place_food(self):
         if len(self.available_places) == 0:
             self.game_over = True
             self.win = True
@@ -89,27 +87,25 @@ class Game:
         self.food = self.rand.choice(possible_places)
         self.available_places.pop(self.food)
 
-    def _move(self, action):      
+    def move(self, action):      
         self.steps += 1
-        self.gap_steps += 1
 
         self.direction = DIRECTIONS[action]
         self.head = (self.head[0] + self.direction[0], self.head[1] + self.direction[1])
         self.snake.insert(0, self.head)
         
         if self.head == self.food:
-            self.gap_steps = 0
             self.score += 1
-            self._place_food()
+            self.place_food()
         else:
             tail = self.snake.pop()
             self.available_places[tail] = 1
-            if (not self.head in self.available_places) or (self.gap_steps > GAME_LOOP):
+            if not self.head in self.available_places:
                 self.game_over = True  
             else:
                 self.available_places.pop(self.head)
 
-    def _get_state(self):
+    def get_state(self):
         # head direction
         head_direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
         i = DIRECTIONS.index(head_direction)
@@ -203,5 +199,5 @@ class Game:
 if __name__ == '__main__':
 
     g = Game() 
-    g.play_saved_model(40)
+    g.play_saved_model(397)
     pg.quit()
