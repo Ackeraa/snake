@@ -108,7 +108,7 @@ class GA:
         self.population.extend(children)
 
     def save_best(self, score):
-        model_pth= os.path.join("model", "best_individual", "nn20_"+str(score)+".pth")
+        model_pth= os.path.join("model", "best_individual", "nn_"+str(score)+".pth")
         torch.save(self.best_individual.nn, model_pth)
         seed_pth = os.path.join("seed", "seed_"+str(score)+".txt")
         with open(seed_pth, "w") as f:
@@ -119,13 +119,13 @@ class GA:
             individual.get_fitness()
         population = self.elitism_selection(self.p_size)
         for i in range(len(population)):
-            pth = os.path.join("model", "all_individual", str(i)+"_nn20.pth")
+            pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
             torch.save(population[i].nn, pth)
 
 if __name__ == '__main__':
     ga = GA()
-    #ga.generate_ancestor()
-    ga.inherit_ancestor()
+    ga.generate_ancestor()
+    #ga.inherit_ancestor()
     #game = Game()
     generation = 0
     record = 0
