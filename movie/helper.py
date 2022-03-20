@@ -36,14 +36,14 @@ class NN(VGroup):
 
 class Grid(VGroup):
     def __init__(self, size=0.6, text="", color=WHITE):
-        square = Square(size).set_collor(color)
-        text = Text(str(text), color=color).scale(0.3).move_to(square.get_center())
+        square = Square(size).set_color(color)
+        text = Text(str(text), color=color).scale(size/2).move_to(square.get_center())
         self.text = text
         self.square = square
         super().__init__(self.square, self.text)
 
-    def update_text(self, text):
-        self.text.become(Text(str(text), color=WHITE).scale(0.3).move_to(self.square.get_center()))
+    def update_text(self, text, size=0.3):
+        self.text.become(Text(str(text), color=WHITE).scale(size).move_to(self.square.get_center()))
 
 class Array(VGroup):
     def __init__(self, length, texts, size=0.6, color=WHITE):

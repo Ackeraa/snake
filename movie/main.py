@@ -1,3 +1,4 @@
+from re import S
 import sys
 sys.path.append('../')
 from manim import *
@@ -84,7 +85,7 @@ class Fig3(Scene):
 
         p1 = Array(n, v1)
         p2 = Array(n, v2)
-
+        
         vg = VGroup()
         vg.add(p1, p2).arrange(RIGHT, buff=1)
         vg.move_to(2*UP)
@@ -117,7 +118,6 @@ class Fig3(Scene):
 
         self.play(FadeOut(c2_l, shift=RIGHT), FadeOut(c2_r, shift=RIGHT), 
                   c1_l.animate.shift(RIGHT * 3.3), c1_r.animate.shift(RIGHT * 3.3))
-
 
         c = VGroup()
         for i in range(idx):
@@ -157,7 +157,83 @@ class Final(Scene):
         #self.add_genes()
         self.add_nn()
         #self.transform_genes_to_nn_edges()
-        self.train_process()
+        #self.train_process()
+        self.whole_picture()
+        self.wait()
+
+    def whole_picture(self):
+        n = 10
+        m = 5
+        vg0 = VGroup()
+        for i in range(m):
+            v1 = [round(random.random(),3) for _ in range(n)]
+            v1[5] = '...'
+            v2 = [round(random.random(),3) for _ in range(n)]
+            v2[5] = '...'
+
+            p1 = Array(n, v1, size=0.2)
+            p2 = Array(n, v2, size=0.2)
+            for i in range(n):
+                p1[i][0].set(stroke_width=1)
+                p2[i][0].set(stroke_width=1)
+
+            vg = VGroup()
+            vg.add(p1, p2).arrange(RIGHT, buff=0.5)
+            vg0.add(vg).arrange(DOWN, buff=1)
+
+        others = VGroup(Text("......").scale(0.5))
+        vg0.add(VGroup(others)).arrange(DOWN, buff=1)
+        vg0.shift(UP*0.7+LEFT*4.5)
+        self.add(vg0)
+        vg1 = VGroup()
+
+        anims1, anims2, anims3, anims4, anims5 = [], [], [], [], []
+        for i in range(m):
+            idx = random.randint(1, n - 2)
+            if idx % 2 == 0:
+                idx += 1
+            p1 = vg0[i][0]
+            p2 = vg0[i][1]
+
+            c1 = VGroup(*copy.deepcopy(p1[:idx]), *copy.deepcopy(p2[idx:])).arrange(RIGHT, buff=0) 
+            c1.next_to(p1, DOWN*1.5)
+            anims1.append(ReplacementTransform(p1[:idx].copy(), c1[:idx]))
+            anims2.append(ReplacementTransform(p2[idx:].copy(), c1[idx:]))
+
+            c2 = VGroup(*copy.deepcopy(p2[:idx]), *copy.deepcopy(p1[idx:])).arrange(RIGHT, buff=0) 
+            c2.next_to(p2, DOWN*1.5)
+            anims1.append(ReplacementTransform(p1[:idx].copy(), c2[:idx]))
+            anims2.append(ReplacementTransform(p1[idx:].copy(), c2[idx:]))
+
+            anims5.append(p2.animate.next_to(p1, DOWN*0.3))
+            anims5.append(c2.animate.next_to(c1, DOWN*0.3))
+            vg1.add(VGroup(c1, c2))
+
+            ls = [i for i in range(n)]
+            num = random.randint(0, 4)
+            cs = random.sample(ls, num)
+            for j in cs:
+                if c1[j][1].text != "...": 
+                    anims3.append(c1[j][0].animate.set_fill(TEAL, opacity=0.4))
+                    new_t1 = str(round(float(c1[j][1].text) + np.random.normal()*0.2, 2))
+                    anims4.append(c1[j].animate.update_text(new_t1, size=0.1))
+            num = random.randint(0, n)
+            cs = random.sample(ls, 4)
+            for j in cs:
+                if c2[j][1].text != "...": 
+                    anims3.append(c2[j][0].animate.set_fill(TEAL, opacity=0.4))
+                    new_t1 = str(round(float(c2[j][1].text) + np.random.normal()*0.2, 2))
+                    c2[j].animate.update_text(new_t1, size=0.15)
+                    anims4.append(c2[j].animate.update_text(new_t1, size=0.1))
+
+        '''
+        self.play(*anims1, run_time=1)
+        self.play(*anims2, run_time=1)
+        self.play(*anims3, run_time=1)
+        self.play(*anims4, run_time=1)
+        self.play(*anims5, run_time=1)
+        '''
+        
         self.wait()
 
     def train_process(self):
@@ -184,7 +260,7 @@ class Final(Scene):
 
         self.add(self.text_vg)
         self.play_game(10, 6, True)
-
+ 
     def play_game(self, size, score, is_train=False):
         model_pth = os.path.join("../", "model", "best_individual", "nn_"+str(score)+'.pth')
         nn = torch.load(model_pth)
@@ -275,7 +351,7 @@ class Final(Scene):
                 anims.append(ShowPassingFlash(e.copy().set_color(PINK),
                                               run_time=1,
                                               time_width=1))
-            i#self.play(*anims)
+            #self.play(*anims)
 
             if i != 2:
                 ids = random.sample([i for i in range(self.struct[i + 1])], 
@@ -313,7 +389,6 @@ class Final(Scene):
                     e = Line(self.nn[i][j], self.nn[i + 1][k], stroke_width=0.3, color=WHITE)
                     self.add(e)
                     self.nn_edges.add(e)
-
 
         text1 = Text("Input", font_size=18).next_to(self.nn[0], UP * 0.5)
         always(text1.next_to, self.nn[0], UP * 0.5)
@@ -357,7 +432,6 @@ class Final(Scene):
         arrow1 = Arrow(start=0.5*UP, end=DOWN).shift(UP)
         text1 = Text("交叉", font_size=18).next_to(arrow1, RIGHT)
         self.play(FadeIn(arrow1), FadeIn(text1))
-
 
         c1_l = copy.deepcopy(p1[:idx])
         c1_l.next_to(p1[idx//2], DOWN * 7)
