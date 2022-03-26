@@ -153,7 +153,7 @@ class Fig3(Scene):
 class Final(Scene):
     def construct(self):
         #self.add_sound("bgm.mp3")
-        #self.play_game(10, 6)
+        #self.play_game(10, 20)
         #self.add_genes()
         self.add_nn()
         #self.transform_genes_to_nn_edges()
@@ -161,33 +161,35 @@ class Final(Scene):
         self.whole_picture()
         self.wait()
 
-    def whole_picture(self):
+    def whole_picture(self, num1=None, num2=None):
+        self.remove(self.nn, *self.nn_edges)
         n = 10
-        m = 5
+        m = 4
         vg0 = VGroup()
         for i in range(m):
             v1 = [round(random.random(),3) for _ in range(n)]
-            v1[5] = '...'
             v2 = [round(random.random(),3) for _ in range(n)]
+            v1[5] = '...'
             v2[5] = '...'
 
-            p1 = Array(n, v1, size=0.2)
-            p2 = Array(n, v2, size=0.2)
+            p1 = Array(n, v1, size=0.3)
+            p2 = Array(n, v2, size=0.3)
             for i in range(n):
-                p1[i][0].set(stroke_width=1)
-                p2[i][0].set(stroke_width=1)
+                p1[i][0].set(stroke_width=1.5)
+                p2[i][0].set(stroke_width=1.5)
 
             vg = VGroup()
             vg.add(p1, p2).arrange(RIGHT, buff=0.5)
-            vg0.add(vg).arrange(DOWN, buff=1)
+            vg0.add(vg).arrange(DOWN, buff=1.5)
 
-        others = VGroup(Text("......").scale(0.5))
-        vg0.add(VGroup(others)).arrange(DOWN, buff=1)
-        vg0.shift(UP*0.7+LEFT*4.5)
+        vg0.shift(UP*0.8+LEFT*3)
+        others = VGroup(Text("......").scale(0.5)).next_to(vg0, DOWN * 6)
+        self.add(others)
         self.add(vg0)
         vg1 = VGroup()
 
-        anims1, anims2, anims3, anims4, anims5 = [], [], [], [], []
+        self.wait()
+        anims1, anims2, anims3, anims4, anims5, anims6, anims7 = [], [], [], [], [], [], []
         for i in range(m):
             idx = random.randint(1, n - 2)
             if idx % 2 == 0:
@@ -195,18 +197,20 @@ class Final(Scene):
             p1 = vg0[i][0]
             p2 = vg0[i][1]
 
-            c1 = VGroup(*copy.deepcopy(p1[:idx]), *copy.deepcopy(p2[idx:])).arrange(RIGHT, buff=0) 
-            c1.next_to(p1, DOWN*1.5)
+            c1 = VGroup(*copy.deepcopy(p1[:idx]), *copy.deepcopy(p2[idx:]))\
+                        .arrange(RIGHT, buff=0) 
+            c1.next_to(p1, DOWN*2.4)
             anims1.append(ReplacementTransform(p1[:idx].copy(), c1[:idx]))
             anims2.append(ReplacementTransform(p2[idx:].copy(), c1[idx:]))
 
-            c2 = VGroup(*copy.deepcopy(p2[:idx]), *copy.deepcopy(p1[idx:])).arrange(RIGHT, buff=0) 
-            c2.next_to(p2, DOWN*1.5)
+            c2 = VGroup(*copy.deepcopy(p2[:idx]), *copy.deepcopy(p1[idx:]))\
+                        .arrange(RIGHT, buff=0) 
+            c2.next_to(p2, DOWN*2.4)
             anims1.append(ReplacementTransform(p1[:idx].copy(), c2[:idx]))
             anims2.append(ReplacementTransform(p1[idx:].copy(), c2[idx:]))
 
-            anims5.append(p2.animate.next_to(p1, DOWN*0.3))
-            anims5.append(c2.animate.next_to(c1, DOWN*0.3))
+            anims5.append(p2.animate.next_to(p1, DOWN*0.55))
+            anims5.append(c2.animate.next_to(c1, DOWN*0.55))
             vg1.add(VGroup(c1, c2))
 
             ls = [i for i in range(n)]
@@ -216,25 +220,163 @@ class Final(Scene):
                 if c1[j][1].text != "...": 
                     anims3.append(c1[j][0].animate.set_fill(TEAL, opacity=0.4))
                     new_t1 = str(round(float(c1[j][1].text) + np.random.normal()*0.2, 2))
-                    anims4.append(c1[j].animate.update_text(new_t1, size=0.1))
+                    anims4.append(c1[j].animate.update_text(new_t1, size=0.15))
             num = random.randint(0, n)
             cs = random.sample(ls, 4)
             for j in cs:
                 if c2[j][1].text != "...": 
                     anims3.append(c2[j][0].animate.set_fill(TEAL, opacity=0.4))
                     new_t1 = str(round(float(c2[j][1].text) + np.random.normal()*0.2, 2))
-                    c2[j].animate.update_text(new_t1, size=0.15)
-                    anims4.append(c2[j].animate.update_text(new_t1, size=0.1))
+                    anims4.append(c2[j].animate.update_text(new_t1, size=0.15))
 
-        '''
+        anims5.append(others.animate.next_to(vg1[-1][1], DOWN * 3 + LEFT * 8))
+
+        p_num = 5
+        c_num = 3
+        indics = [i for i in range(8)]
+        p_del = random.sample(indics, p_num)
+        c_del = random.sample(indics, c_num)
+        for p in p_del:
+            i1 = p // 2
+            i2 = p % 2
+            anims6.append(FadeOut(vg0[i1][i2]))
+        for c in c_del:
+            i1 = c // 2
+            i2 = c % 2
+            anims6.append(FadeOut(vg1[i1][i2]))
+
+
+        # cross
+        info = Info("交叉")
+        self.add(info)
         self.play(*anims1, run_time=1)
         self.play(*anims2, run_time=1)
+
+        # mutate
+        self.play(info.animate.update_text("变异"))
         self.play(*anims3, run_time=1)
         self.play(*anims4, run_time=1)
+
+        # plot rect
+        self.play(info.animate.update_text(""))
         self.play(*anims5, run_time=1)
-        '''
-        
+        rec0 = RoundedRectangle(width=4, height=7.8, stroke_color=RED,
+                                stroke_width=2, corner_radius=0.2)
+        rec0.shift(LEFT*4.75)
+        self.play(FadeIn(rec0))
+
+        # transform to nn edge
+        self.play(info.animate.update_text("转化为神经网络参数"))
+
+        arr1 = Arrow(start=LEFT+UP, end=RIGHT, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.05, color=BLUE)
+        arr2 = Arrow(start=LEFT, end=RIGHT, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.05, color=BLUE)
+        arr3 = Arrow(start=LEFT+DOWN, end=RIGHT, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.05, color=BLUE)
+        arr_vg = VGroup(arr1, arr2, arr3).arrange(DOWN, buff=2.3)
+        arr_vg.shift(LEFT*1.9)
+        self.play(FadeIn(arr_vg))
+
+        vgg = VGroup(self.nn, self.nn_edges)
+        vgg.scale(0.2)
+        vg_1 = VGroup(*[vgg.copy() for _ in range(4)]).arrange(DOWN, buff=0.4)
+        vg_1.add(VGroup(Text("......").scale(0.5))).arrange(DOWN, buff=0.4)
+        vg_1.shift(LEFT*0.1)
+        self.play(FadeIn(vg_1))
+
+        # play game
+        self.play(info.animate.update_text(""))
+
+        matrix = get_matrix(10, 0.7, GRAY, stroke_width=1).scale(0.2)
+        matrix[5][5].set_fill(WHITE, opacity=1)
+        matrix[5][6].set_fill(PURE_BLUE, opacity=1)
+        matrix[4][6].set_fill(PURE_BLUE, opacity=1)
+        matrix[2][2].set_fill(PURE_RED, opacity=1)
+        vg_2 = VGroup(*[matrix.copy() for _ in range(4)])\
+                .arrange(DOWN, buff=0.4)
+        vg_2.add(VGroup(Text("......").scale(0.5))).arrange(DOWN, buff=0.4)
+        for i in range(5):
+            vg_2[i].next_to(vg_1[i], RIGHT)
+        vg_2.shift(RIGHT*0.6)
+        vg_2[4].shift(RIGHT)
+        self.play(FadeIn(vg_2))
+
+        arr_vg2 = VGroup()
+        for _ in range(4):
+            arr1 = Arrow(start=LEFT*0.2, end=RIGHT*0.2, stroke_width=1,
+                         max_tip_length_to_length_ratio=0.2)
+            arr2 = Arrow(start=RIGHT*0.2, end=LEFT*0.2, stroke_width=1,
+                         max_tip_length_to_length_ratio=0.2)
+            arr_vg2 += VGroup(arr1, arr2).arrange(DOWN, buff=0)
+
+        arr_vg2.arrange(DOWN, buff = 1.57)
+        arr_vg2.shift(UP*0.2+RIGHT)
+        self.play(FadeIn(arr_vg2))
+        self.play(info.animate.update_text("模拟至游戏结束，计算得分"))
+
+        box_vg = VGroup()
+        for i in range(4):
+            rec = RoundedRectangle(width=4, height=1.6, stroke_color=TEAL,
+                                    stroke_width=2, corner_radius=0.3)
+            box_vg += rec
+        box_vg.arrange(DOWN, buff=0.2)
+        box_vg.shift(RIGHT+UP*0.2)
+        self.play(FadeIn(box_vg))
+        self.wait(2)
+
+        # delete
+        self.play(info.animate.update_text("根据得分淘汰个体"))
+
+        path = VMobject()
+        dot = Dot(radius=0.01).shift(RIGHT*3.5)
+        path.set_points_as_corners([dot.get_center(), dot.get_center()])
+        def update_path(path):
+            previous_path = path.copy()
+            previous_path.add_points_as_corners([dot.get_center()])
+            path.become(previous_path)
+        path.add_updater(update_path)
+
+        self.add(path, dot)
+        self.play(dot.animate.shift(RIGHT*0.2))
+        self.play(dot.animate.shift(UP*4))
+        self.play(dot.animate.shift(LEFT*8.5))
+        self.play(dot.animate.shift(DOWN*0.1))
+        vg = VGroup()
+
+        t_vg = VGroup()
+        for i in range(m):
+            for j in range(2):
+                if i * 2 + j not in p_del:
+                    if len(t_vg) == 0:
+                        t_vg.add(vg0[i][j])
+                    else:
+                        t_vg.add(vg0[i][j])
+                        vg.add(t_vg.copy().arrange(RIGHT, buff=0.5)).arrange(DOWN, buff=1.5)
+                        anims7.append(ReplacementTransform(t_vg[0], vg[-1][0])) 
+                        anims7.append(ReplacementTransform(t_vg[1], vg[-1][1])) 
+                        t_vg = VGroup()
+                if i * 2 + j not in c_del:
+                    if len(t_vg) == 0:
+                        t_vg.add(vg1[i][j])
+                    else:
+                        t_vg.add(vg1[i][j])
+                        vg.add(t_vg.copy().arrange(RIGHT, buff=0.5)).arrange(DOWN, buff=1.5)
+                        anims7.append(ReplacementTransform(t_vg[0], vg[-1][0])) 
+                        anims7.append(ReplacementTransform(t_vg[1], vg[-1][1])) 
+                        t_vg = VGroup()
+        vg.shift(UP*0.6+LEFT*3)
+        #others = VGroup(Text("......").scale(0.5)).next_to(vg, DOWN * 6)
+        #self.add(others)
+
+        self.play(*anims6, run_time=1)
+        self.play(FadeOut(vg_1), FadeOut(vg_2), FadeOut(arr_vg2), FadeOut(box_vg),
+                  FadeOut(path), FadeOut(dot), FadeOut(arr_vg), FadeOut(rec0))
+        self.play(info.animate.update_text("下一轮"))
+        self.play(*anims7, run_time=1)
+
         self.wait()
+        self.remove(*self.mobjects)
 
     def train_process(self):
         self.play(self.nn.animate.shift(RIGHT * 5).scale(0.9),
@@ -374,7 +516,7 @@ class Final(Scene):
 
     def add_nn(self):
         self.nn = VGroup()
-        struct = [32, 20, 12, 4]
+        struct = [32, 12, 8, 4]
         self.struct = struct
         for i in range(4):
             self.nn.add(VGroup(*[Circle(0.06, color=WHITE, stroke_width=1.5) 
@@ -390,6 +532,7 @@ class Final(Scene):
                     self.add(e)
                     self.nn_edges.add(e)
 
+        '''
         text1 = Text("Input", font_size=18).next_to(self.nn[0], UP * 0.5)
         always(text1.next_to, self.nn[0], UP * 0.5)
         text2 = Text("Hidden1", font_size=18).next_to(self.nn[1], UP * 0.5)
@@ -402,6 +545,7 @@ class Final(Scene):
                   FadeIn(text2),
                   FadeIn(text3),
                   FadeIn(text4), run_time=0.3)
+        '''
 
     def add_genes(self):
         n = 10
@@ -501,7 +645,40 @@ class Final(Scene):
 
 class Fig4(Scene):
     def construct(self):
-        circle = Circle(0.06, color=WHITE, stroke_width=1.2)
-        self.add(circle)
+        rec = RoundedRectangle(width=4, height=7, stroke_color=RED,
+                                stroke_width=2, corner_radius=0.2)
+        rec.shift(LEFT*4.75)
+        self.add(rec)
+        arr1 = Arrow(start=LEFT+UP, end=RIGHT, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.05, color=GREEN)
+        arr2 = Arrow(start=LEFT, end=RIGHT, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.05, color=GREEN)
+        arr3 = Arrow(start=LEFT+DOWN, end=RIGHT, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.05, color=GREEN)
+        arr_vg = VGroup(arr1, arr2, arr3).arrange(DOWN, buff=2.3)
+        arr_vg.shift(LEFT*1.9)
+        self.add(arr_vg)
+
+        box_vg = VGroup()
+        for i in range(4):
+            rec = RoundedRectangle(width=4.5, height=1.5, stroke_color=TEAL,
+                                    stroke_width=2, corner_radius=0.3)
+            box_vg += rec
+        box_vg.arrange(DOWN, buff=0.2)
+        box_vg.shift(RIGHT*1.2+UP*0.2)
+
+        arr_vg2 = VGroup()
+        for _ in range(4):
+            arr1 = Arrow(start=LEFT*0.2, end=RIGHT*0.2, stroke_width=1,
+                         max_tip_length_to_length_ratio=0.2)
+            arr2 = Arrow(start=RIGHT*0.2, end=LEFT*0.2, stroke_width=1,
+                         max_tip_length_to_length_ratio=0.2)
+            arr_vg2 += VGroup(arr1, arr2).arrange(DOWN, buff=0)
+
+        arr_vg2.arrange(DOWN, buff = 1.55)
+        arr_vg2.shift(UP*0.2+RIGHT)
+        self.add(box_vg)
+        self.add(arr_vg2)
+        
         self.wait()
 

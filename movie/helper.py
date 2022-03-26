@@ -2,11 +2,11 @@ from manim import *
 import math
 from queue import Queue
 
-def get_array(size, square_size=1, color=WHITE):
-    return VGroup(*[Square(square_size).set_color(color) for _ in range(size)]).arrange(RIGHT, buff=0)
+def get_array(size, square_size=1, color=WHITE, stroke_width=3):
+    return VGroup(*[Square(square_size, stroke_width=stroke_width).set_color(color) for _ in range(size)]).arrange(RIGHT, buff=0)
 
-def get_matrix(size, square_size=1, color=WHITE):
-    return VGroup(*[get_array(size, square_size, color) for _ in range(size)]).arrange(DOWN, buff=0)
+def get_matrix(size, square_size=1, color=WHITE, stroke_width=3):
+    return VGroup(*[get_array(size, square_size, color, stroke_width) for _ in range(size)]).arrange(DOWN, buff=0)
 
 def put_values_up_array(array, values, color=WHITE):
     return VGroup(*[Text(str(values[i]), color=color).scale(0.6).move_to(array[i].get_center()).shift(UP) for i in range(len(values))])
@@ -37,13 +37,27 @@ class NN(VGroup):
 class Grid(VGroup):
     def __init__(self, size=0.6, text="", color=WHITE):
         square = Square(size).set_color(color)
+        self.number = text
         text = Text(str(text), color=color).scale(size/2).move_to(square.get_center())
         self.text = text
         self.square = square
         super().__init__(self.square, self.text)
 
     def update_text(self, text, size=0.3):
+        self.number = text
         self.text.become(Text(str(text), color=WHITE).scale(size).move_to(self.square.get_center()))
+
+class Info(VGroup):
+    def __init__(self, text="", pos=RIGHT*5, color=WHITE):
+        self.color = color
+        self.pos = pos
+        self.text = Text(text, color=color, font_size=18)
+        self.text.shift(self.pos)
+        super().__init__(self.text)
+    
+    def update_text(self, text):
+        self.text=self.text.become(Text(text, color=self.color, font_size=18))
+        self.text.shift(self.pos)
 
 class Array(VGroup):
     def __init__(self, length, texts, size=0.6, color=WHITE):
