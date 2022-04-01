@@ -48,15 +48,15 @@ class Grid(VGroup):
         self.text.become(Text(str(text), color=WHITE).scale(size).move_to(self.square.get_center()))
 
 class Info(VGroup):
-    def __init__(self, text="", pos=RIGHT*5, color=WHITE):
+    def __init__(self, text="", pos=RIGHT*5, color=TEAL_D):
         self.color = color
         self.pos = pos
-        self.text = Text(text, color=color, font_size=18)
+        self.text = Text(text, color=color, font_size=20)
         self.text.shift(self.pos)
         super().__init__(self.text)
     
     def update_text(self, text):
-        self.text=self.text.become(Text(text, color=self.color, font_size=18))
+        self.text=self.text.become(Text(text, color=TEAL_D, font_size=20))
         self.text.shift(self.pos)
 
 class Array(VGroup):
