@@ -8,6 +8,7 @@ import torch
 import os
 
 class Individual:
+
     def __init__(self, genes):
         self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT)
         self.genes = genes
@@ -26,7 +27,9 @@ class Individual:
 
         self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
  
+
 class GA:
+    
     def __init__(self, p_size=P_SIZE, c_size=C_SIZE, genes_len=GENES_LEN, mutate_rate=MUTATE_RATE):
         self.p_size = p_size
         self.c_size = c_size

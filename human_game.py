@@ -3,29 +3,50 @@ import pygame as pg
 from settings import *
 
 class Game:
+    """This Class is for user to play snake.
+
+    Attributes:
+        X: Columns of the game board.
+        Y: Rows of the game board.
+        width: Width of the game board.
+        height: Height of the game board.
+        screen: Pygame screen.
+        clock: Pygame clock.
+        font_name: Name of the font.
+        scores: Food eat by the snake.
+        steps: Steps moved of the snake.
+        snake: postion of the snake.
+        food: Position of the food.
+        direction: The direction of the snake's head.
+        available_places: # Places available for snake to move or place food. 
+        game_over: A boolean if the game is over.
+        exit: A boolean if the user quit the game.
+    """
+    
     def __init__(self, rows=ROWS, cols=COLS):
         pg.init()
+
         self.Y = rows
         self.X = cols
         self.width = cols * GRID_SIZE
         self.height = rows * GRID_SIZE + BLANK_SIZE
-        self.screen = pg.display.set_mode((self.width, self.height))
+
         pg.display.set_caption(TITLE)
+        self.screen = pg.display.set_mode((self.width, self.height))
         self.clock = pg.time.Clock()
         self.font_name = pg.font.match_font(FONT_NAME)
 
-        self.score = 0
-        self.step = 0
+        self.scores = 0
+        self.steps = 0
         self.snake = []
         self.food = None
         self.direction = None
         self.available_places = {}
         self.game_over = False
-        self.win = False
-        self.playing = True
+        self.exit = False
 
     def play(self):
-        while self.playing:
+        while not self.exit:
             self._new()
             while not self.game_over:
                 self._event()
@@ -34,16 +55,15 @@ class Game:
 
     def _new(self):
         self.game_over = False
-        self.win = False
         self.snake = []
         self.steps = 0
-        self.score = 0
+        self.scores = 0
         self.available_places = {}
         for i in range(self.X):
             for j in range(self.Y):
                 self.available_places[(i, j)] = 1
 
-        # create new snake
+        # Create new snake.
         x = random.randint(2, self.X - 3)
         y = random.randint(2, self.Y - 3)
         self.head = (x, y)
@@ -53,6 +73,8 @@ class Game:
         self.snake.append(self.head)
         self.snake.append(body1)
         self.snake.append(body2)
+
+        # Update places available to move or place food.
         self.available_places.pop(self.head)
         self.available_places.pop(body1)
         self.available_places.pop(body2)
@@ -62,7 +84,6 @@ class Game:
     def _place_food(self):
         if len(self.available_places) == 0:
             self.game_over = True
-            self.win = True
             return
         self.food = random.choice(list(self.available_places.keys()))
         self.available_places.pop(self.food)
@@ -72,13 +93,13 @@ class Game:
         self.head = (self.head[0] + self.direction[0], self.head[1] + self.direction[1])
         self.snake.insert(0, self.head)
         
-        if self.head == self.food:
-            self.score += 1
+        if self.head == self.food:  # Eat the food.
+            self.scores += 1
             self._place_food()
         else:
             tail = self.snake.pop()
             self.available_places[tail] = 1
-            if not self.head in self.available_places:
+            if not self.head in self.available_places:  # Hit the wall or itself.
                 self.game_over = True  
             else:
                 self.available_places.pop(self.head)
@@ -86,6 +107,7 @@ class Game:
         self.clock.tick(FPS)
 
     def _get_xy(self, pos):
+        """Transform pos to the coordinates of pygame."""
         x = pos[1] * GRID_SIZE
         y = pos[0] * GRID_SIZE + BLANK_SIZE
         return (x, y)
@@ -93,23 +115,23 @@ class Game:
     def _draw(self):
         self.screen.fill(BLACK)
         
-        # draw head
+        # Draw head.
         x, y = self._get_xy(self.snake[0])
         pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
-        # draw body
+        # Draw body.
         for s in self.snake[1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
         
-        # draw food
+        # Draw food.
         x, y = self._get_xy(self.food)
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
-        # draw text
-        text = "score: " + str(self.score)
+        # Draw text.
+        text = "score: " + str(self.scores)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
         text_rect = text_surface.get_rect()
@@ -117,7 +139,7 @@ class Game:
         self.screen.blit(text_surface, text_rect)
 
 
-        # draw grid
+        # Draw grid.
         n = (self.height - BLANK_SIZE) // GRID_SIZE + 1
         m = self.width // GRID_SIZE
         for i in range(0, n):
@@ -130,11 +152,12 @@ class Game:
         pg.display.flip()
 
     def _event(self):
+        """Get the event from user interface."""
         self.clock.tick(FPS)
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.game_over  = True
-                self.playing = False
+                self.exit = True
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_UP and self.direction != (1, 0):
                     self.direction = (-1, 0)

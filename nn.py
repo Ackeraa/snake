@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import random
 
-class Net(nn.Module):       
+class Net(nn.Module):   
+        
     def __init__(self, n_input, n_hidden1, n_hidden2, n_output):
         super(Net, self).__init__()
 

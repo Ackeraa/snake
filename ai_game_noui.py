@@ -3,10 +3,11 @@ from settings import *
 import numpy as np
 
 class Game:
+
     def __init__(self, rows=ROWS, cols=COLS):
         self.Y = rows
         self.X = cols
-        self.score = 0
+        self.scores = 0
         self.snake = []
         self.food = None
         self.available_places = {}   
@@ -28,7 +29,7 @@ class Game:
         self.win = False
         self.snake = []
         self.steps = 0
-        self.score = 0
+        self.scores = 0
         self.available_places = {}
         self.uniq = [0] * (self.X * self.Y - 2)
         for x in range(self.X):
@@ -68,7 +69,7 @@ class Game:
         self.snake.insert(0, self.head)
         
         if self.head == self.food:
-            self.score += 1
+            self.scores += 1
             self.place_food()
         else:
             tail = self.snake.pop()
