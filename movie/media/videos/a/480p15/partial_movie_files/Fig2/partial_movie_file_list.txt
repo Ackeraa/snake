@@ -1,2 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/gsx/MyProgram/Python/snake/movie/media/videos/a/480p15/partial_movie_files/Fig2/3163782288_3493041802_2095751204.mp4'
