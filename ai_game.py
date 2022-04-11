@@ -18,7 +18,7 @@ class Game:
         screen: Pygame screen.
         clock: Pygame clock.
         font_name: Name of the font.
-        scores: Food eat by the snake.
+        score: Food eat by the snake.
         steps: Steps moved of the snake.
         snake: postion of the snake.
         food: Position of the food.
@@ -41,7 +41,7 @@ class Game:
         self.clock = pg.time.Clock()
         self.font_name = pg.font.match_font(FONT_NAME)
 
-        self.scores = 0
+        self.score = 0
         self.steps = 0
         self.snake = []
         self.food = None
@@ -67,16 +67,16 @@ class Game:
             self.move(action)
             self._draw()
 
-    def play_saved_model(self, scores):
+    def play_saved_model(self, score):
         """Use the saved Neural Network model play the game.
 
         Args:
-            scores: Specify which model to load, also indicates the highest score it can get.
+            score: Specify which model to load, also indicates the highest score it can get.
         """
-        model_pth = os.path.join("model", "best_individual", "nn_"+str(scores)+'.pth')
+        model_pth = os.path.join("model", "best_individual", "nn_"+str(score)+'.pth')
         nn = torch.load(model_pth)
 
-        seed_pth = os.path.join("seed", "seed_"+str(scores)+'.txt')  # Get the seed for reproduction.
+        seed_pth = os.path.join("seed", "seed_"+str(score)+'.txt')  # Get the seed for reproduction.
         with open(seed_pth, "r") as f:
             seed = int(f.read())
  
@@ -87,7 +87,7 @@ class Game:
         self.win = False
         self.snake = []
         self.steps = 0
-        self.scores = 0
+        self.score = 0
         self.available_places = {}
         for x in range(self.X):
             for y in range(self.Y):
@@ -132,7 +132,7 @@ class Game:
         self.snake.insert(0, self.head)
         
         if self.head == self.food:  # Eat the food.
-            self.scores += 1
+            self.score += 1
             self.place_food()
         else:
             tail = self.snake.pop()
@@ -209,7 +209,7 @@ class Game:
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
         # draw text
-        text = "score: " + str(self.scores)
+        text = "score: " + str(self.score)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
         text_rect = text_surface.get_rect()
