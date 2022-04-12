@@ -4,7 +4,7 @@ GRID_SIZE = 30
 BLANK_SIZE = 40
 ROWS = 10
 COLS = 10
-FPS = 50
+FPS = 10
 FONT_NAME = 'arial'
 
 
@@ -25,7 +25,7 @@ LINE_COLOR = BLUE1
 FOOD = 2
 
 # AI settings
-N_INPUT = 32
+N_INPUT = 36
 N_HIDDEN1 = 12
 N_HIDDEN2 = 8
 N_OUTPUT = 4

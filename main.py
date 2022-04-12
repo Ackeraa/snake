@@ -19,28 +19,22 @@ class Individual:
         seed: The random seed of the game, saved for reproduction.
     """
     def __init__(self, genes):
-        self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT)
         self.genes = genes
+        self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT, genes.copy())
         self.score = 0
         self.steps = 0
         self.seed = None
     
     def get_fitness(self):
-        """Get the fitness of Individual
+        """Get the fitness of Individual.
 
            First transform the genes to the weight of Neural Network, then create a new
            game and use the Neural Network to play, finally use the reward function to
            calculate its fitness.
         """
-        self.nn.update(self.genes.copy())
-        game = Game_Noui()
-        game.play(self.nn)
-        steps = game.steps
-        score = game.score
-        self.score = score
-        self.steps = steps
-        self.seed = game.seed
-
+        score = self.score
+        steps = self.steps
+        print("score", score, "steps", steps)
         self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
  
 class GA:
@@ -115,15 +109,26 @@ class GA:
         
         return selection
 
+    def compete(self, p1, p2):
+        game = Game_Noui()
+
+        # To be changed.
+        p1.score, p1.steps, p2.score, p2.steps = game.play(p1.nn, p2.nn)
+        #print("FUCK", p1.score, p1.steps, p2.score, p2.steps)
+        p1.get_fitness()
+        print("FFF", p1.fitness)
+        p2.get_fitness() 
+
     def evolve(self):
         sum_score = 0
-        for individual in self.population:
-            individual.get_fitness()
-            sum_score += individual.score
+        for i in range(len(self.population) - 1):
+            self.compete(self.population[i], self.population[i + 1])
+            sum_score += self.population[i].score + self.population[i + 1].score
         self.avg_score = sum_score / len(self.population)
         self.population = self.elitism_selection(self.p_size)  # Select parents to generate children.
         self.best_individual = self.population[0]
         random.shuffle(self.population)
+        print("FUCK", len(self.population))
 
         # Generate children.
         children = []
@@ -182,12 +187,12 @@ if __name__ == '__main__':
         print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
-            ga.save_best(ga.best_individual.score)
+            #ga.save_best(ga.best_individual.score)
             if args.show:
                 game.play(ga.best_individual.nn, ga.best_individual.seed)
         
         # Save the population every 20 generation.
-        if generation % 20 == 0:
-            ga.save_all()
+        #if generation % 20 == 0:
+        #    ga.save_all()
 
 

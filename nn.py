@@ -16,7 +16,7 @@ class Net(nn.Module):
         relu: Activation function of fc1 and fc2.
         sigmoid: Activation function of output.
     """    
-    def __init__(self, n_input, n_hidden1, n_hidden2, n_output):
+    def __init__(self, n_input, n_hidden1, n_hidden2, n_output, weights):
         super(Net, self).__init__()
 
         self.a = n_input
@@ -29,6 +29,8 @@ class Net(nn.Module):
         self.out = nn.Linear(n_hidden2, n_output)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
+
+        self.update(weights)
 
     def forward(self, x):
         y = self.fc1(x)

@@ -4,16 +4,18 @@ from settings import *
 import numpy as np
 import os
 import torch
+from enum import Enum
 
 class Snake:
 
-    def __init__(self, id, pos, direction, nn):
+    def __init__(self, id, head, direction, nn):
         self.id = id
-        self.snake = [pos]
+        self.snake = [head]
         self.direction = direction
         self.nn = nn
         self.score = 0
         self.steps = 0
+        self.dead = False
 
     def move(self, board):
         """Take a direction to move.
@@ -27,37 +29,37 @@ class Snake:
         self.direction = DIRECTIONS[action]
         head = (self.snake[0][0] + self.direction[0], self.snake[0][1] + self.direction[1])
         self.snake.insert(0, head)
-        
-        if board[head[0]][head[1]] == 2:  # Eat the food.
-            self.score += 1
-            board[head[0]][head[1]] = self.id
 
-            return True
+        has_eat = False
+        if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
+            board[head[0]][head[1]] != -1):  # Hit the wall or itself or other.
+            self.snake.pop()
+            self.dead = True
         else:
             tail = self.snake.pop()
             board[tail[0]][tail[1]] = -1
-            if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
-                board[head[0]][head[1]] != -1):  # Hit the wall or itself or other.
-                self.game_over = True
-            else:
-                board[head[0]][head[1]] = self.id
+            if board[head[0]][head[1]] == 2:  # Eat the food.
+                self.score += 1
+                has_eat = True
 
-            return False
+            board[head[0]][head[1]] = self.id
+
+        return has_eat
 
     def get_state(self, board):
         # Head direction.
-        head_direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
-        i = DIRECTIONS.index(head_direction)
+        i = DIRECTIONS.index(self.direction)
         head_dir = [0.0, 0.0, 0.0, 0.0]
         head_dir[i] = 1.0
 
+        '''
         # Tail direction.
         tail_direction = (self.snake[-2][0] - self.snake[-1][0], self.snake[-2][1] - self.snake[-1][1])
         i = DIRECTIONS.index(tail_direction)
         tail_dir = [0.0, 0.0, 0.0, 0.0]
         tail_dir[i] = 1.0
-
-        state = [head_dir, tail_dir]
+        '''
+        state = head_dir
         
         # Vision.
         dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
@@ -73,11 +75,11 @@ class Snake:
             dis_to_food = np.inf
             dis_to_self = np.inf
             dis_to_other = np.inf
-            while x < self.X and x >= 0 and y < self.Y and y >= 0:
+            while x < len(board) and x >= 0 and y < len(board[0]) and y >= 0:
                 if board[x][y] == FOOD:
                     see_food = 1.0  
                     dis_to_food = dis
-                elif board[x][y] = self.id:
+                elif board[x][y] == self.id:
                     see_self = 1.0 
                     dis_to_self = dis
                 elif board[x][y] != -1:
@@ -129,10 +131,7 @@ class Game:
 
         self.snakes = []
         self.food = None
-        self.available_places = {}
         self.board = []
-        self.game_over = False
-        self.win = False
 
     def play(self, nn1, nn2, seed=None):
         """Use the Neural Network to play the game.
@@ -144,20 +143,29 @@ class Game:
         """
         self.rand = random.Random(seed)
         self.new(nn1, nn2)
-        while not self.game_over:
+        while True:
             self._event()
             first_to_move = random.randint(0, 1)
+            has_eat1 = has_eat2 = False
 
             snake1 = self.snakes[first_to_move]
-            has_eat1 = snake1.move(self.board)
+            if not snake1.dead:
+                has_eat1 = snake1.move(self.board)
 
             snake2 = self.snakes[first_to_move^1]
-            has_eat2 = snake2.move(self.board)
+            if not snake2.dead:
+                has_eat2 = snake2.move(self.board)
+
+            if snake1.dead and snake2.dead:
+                break
 
             if has_eat1 or has_eat2:
                 self.food = self.place_sth(FOOD)
 
             self._draw()
+
+        return self.snakes[0].score, self.snakes[0].steps,\
+               self.snakes[1].score, self.snakes[1].steps, 
 
     def play_saved_model(self, score):
         """Use the saved Neural Network model play the game.
@@ -175,9 +183,6 @@ class Game:
         self.play(nn, seed)
 
     def new(self, nn1, nn2):
-        self.game_over = False
-        self.win = False
-
         # empty: -1, snake1: 0, snake2: 1, food: 2
         self.board = [[-1 for _ in range(self.X)] for _ in range(self.Y)]
 
@@ -185,13 +190,13 @@ class Game:
         self.snakes = []
         head1 = self.place_sth(0)
         direction1 = DIRECTIONS[self.rand.randint(0, 3)]
-        self.snakes.append(Snake(head1, direction1, nn1))
+        self.snakes.append(Snake(0, head1, direction1, nn1))
                                                                  
         head2 = self.place_sth(1)
         direction2 = DIRECTIONS[self.rand.randint(0, 3)]
-        self.snakes.append(Snake(head2, direction2, nn2))
+        self.snakes.append(Snake(1, head2, direction2, nn2))
         
-        self.food = place_sth(FOOD)
+        self.food = self.place_sth(FOOD)
   
     def place_sth(self, sth):
         empty_cells = []
@@ -206,6 +211,8 @@ class Game:
         cell = self.rand.choice(empty_cells)
         self.board[cell[0]][cell[1]] = sth
 
+        return cell
+
     def _get_xy(self, pos):
         """Transform pos to the coordinates of pygame."""
         x = pos[0] * GRID_SIZE
@@ -216,23 +223,25 @@ class Game:
         self.screen.fill(BLACK)
         
         # Draw head1.
-        x, y = self._get_xy(self.snakes[0][0])
-        pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+        if not self.snakes[0].dead:
+            x, y = self._get_xy(self.snakes[0].snake[0])
+            pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+            pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
         # Draw body1.
-        for s in self.snakes[0][1:]:
+        for s in self.snakes[0].snake[1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
         # Draw head2.
-        x, y = self._get_xy(self.snakes[1][0])
-        pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+        if not self.snakes[1].dead:
+            x, y = self._get_xy(self.snakes[1].snake[0])
+            pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+            pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
         # Draw body2.
-        for s in self.snakes[1][1:]:
+        for s in self.snakes[1].snake[1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
@@ -242,7 +251,7 @@ class Game:
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
         # Draw text.
-        text = "score: " + str(self.score)
+        text = "score1: " + str(self.snakes[0].score) +  "   score2: " + str(self.snakes[1].score)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
         text_rect = text_surface.get_rect()
