@@ -13,6 +13,7 @@ class Game:
         score: Food eat by the snake.
         steps: Steps moved of the snake.
         snake: postion of the snake.
+        head: head of the snake.
         food: Position of the food.
         available_places: # Places available for snake to move or place food. 
         game_over: A boolean if the game is over.
@@ -28,6 +29,7 @@ class Game:
         self.score = 0
         self.steps = 0
         self.snake = []
+        self.head = None
         self.food = None
         self.available_places = {}   
         self.game_over = False
