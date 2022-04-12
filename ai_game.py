@@ -43,14 +43,18 @@ class Game:
 
         self.score = 0
         self.steps = 0
-        self.snake = []
+        self.head1 = None
+        self.head2 = None
+        self.snake1 = []
+        self.snake2 = []
+        self.direction1 = None
+        self.direction2 = None
         self.food = None
-        self.direction = None
         self.available_places = {}
         self.game_over = False
         self.win = False
 
-    def play(self, nn, seed=None):
+    def play(self, nn1, nn2, seed=None):
         """Use the Neural Network to play the game.
 
         Args:
@@ -62,9 +66,12 @@ class Game:
         self.new()
         while not self.game_over:
             self._event()
-            state = self.get_state()
-            action = nn.predict(state)
-            self.move(action)
+            state1 = self.get_state(self.snake1)
+            action1 = nn1.predict(state1)
+            state2 = self.get_state(self.snake2)
+            action2 = nn2.predict(state2)
+            self.move(self.snake1, action1)
+            self.move(self.snake2, action2)
             self._draw()
 
     def play_saved_model(self, score):
@@ -85,7 +92,8 @@ class Game:
     def new(self):
         self.game_over = False
         self.win = False
-        self.snake = []
+        self.snake1 = []
+        self.snake2 = []
         self.steps = 0
         self.score = 0
         self.available_places = {}
@@ -94,8 +102,6 @@ class Game:
                 self.available_places[(x, y)] = 1
 
         # Create new snake.
-        x = self.rand.randint(2, self.X - 3)
-        y = self.rand.randint(2, self.Y - 3)
         self.head = (x, y)
         direction = DIRECTIONS[self.rand.randint(0, 3)]
         body1 = (self.head[0] - direction[0], self.head[1] - direction[1])
