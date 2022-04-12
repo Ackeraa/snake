@@ -195,22 +195,22 @@ class Game:
     def _draw(self):
         self.screen.fill(BLACK)
         
-        # draw head
+        # Draw head
         x, y = self._get_xy(self.snake[0])
         pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
-        # draw body
+        # Draw body.
         for s in self.snake[1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
         
-        # draw food
+        # Draw food.
         x, y = self._get_xy(self.food)
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
-        # draw text
+        # Draw text.
         text = "score: " + str(self.score)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
@@ -218,7 +218,7 @@ class Game:
         text_rect.midtop = ((self.width / 2, 5))
         self.screen.blit(text_surface, text_rect)
 
-        # draw grid
+        # Draw grid.
         x = self.width // GRID_SIZE
         y = (self.height - BLANK_SIZE) // GRID_SIZE + 1
         for i in range(0, x):
