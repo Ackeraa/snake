@@ -239,5 +239,5 @@ class Game:
 if __name__ == '__main__':
 
     g = Game() 
-    g.play_saved_model(397)
+    g.play_saved_model(97)
     pg.quit()

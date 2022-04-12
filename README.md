@@ -1,5 +1,6 @@
 # Snake AI
 
+
 <p align="center">
     <img src="https://github.com/Ackeraa/snake/blob/master/snake.gif"  width="30%" height="30%" />
 </p>

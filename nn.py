@@ -3,7 +3,19 @@ import torch.nn as nn
 import random
 
 class Net(nn.Module):   
-        
+    """Neural Network implementation.
+
+    Attributes:
+        a: Size of input layer.
+        b: Size of hidden layer 1.
+        c: Size of hidden layer 2.
+        d: Size of output layer.
+        fc1: Full connection layer 1.
+        fc2: Full connection layer 2.
+        out: Output layer.
+        relu: Activation function of fc1 and fc2.
+        sigmoid: Activation function of output.
+    """    
     def __init__(self, n_input, n_hidden1, n_hidden2, n_output):
         super(Net, self).__init__()
 
@@ -28,6 +40,7 @@ class Net(nn.Module):
         return y
 
     def update(self, weights):
+        """Update the weights of the Neural Network."""
         weights = torch.FloatTensor(weights)
         with torch.no_grad():
             x = self.a * self.b
