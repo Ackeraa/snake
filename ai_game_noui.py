@@ -29,16 +29,16 @@ class Snake:
 
         has_eat = False
         if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
-            board[head[0]][head[1]] != -1):  # Hit the wall or itself or other.
+            (board[head[0]][head[1]] != -1 and board[head[0]][head[1]] != FOOD)):  # Hit the wall or itself or other.
             self.snake.pop()
             self.dead = True
         else:
-            tail = self.snake.pop()
-            board[tail[0]][tail[1]] = -1
-            if board[head[0]][head[1]] == 2:  # Eat the food.
+            if board[head[0]][head[1]] == FOOD:  # Eat the food.
                 self.score += 1
                 has_eat = True
             else:                             # Nothing happened.
+                tail = self.snake.pop()
+                board[tail[0]][tail[1]] = -1
                 # Check if arises infinate loop.
                 if (head, food) not in self.uniq:
                     self.uniq.append((head, food))
@@ -130,7 +130,7 @@ class Game:
     def play(self, nn1, nn2):
         self.new(nn1, nn2)
         while True:
-            first_to_move = random.randint(0, 1)
+            first_to_move = self.rand.randint(0, 1)
             has_eat1 = has_eat2 = False
 
             snake1 = self.snakes[first_to_move]
@@ -148,7 +148,7 @@ class Game:
                 self.food = self.place_sth(FOOD)
 
         return self.snakes[0].score, self.snakes[0].steps,\
-               self.snakes[1].score, self.snakes[1].steps, 
+               self.snakes[1].score, self.snakes[1].steps, self.seed
 
     def new(self, nn1, nn2):
         # empty: -1, snake1: 0, snake2: 1, food: 2
@@ -180,77 +180,6 @@ class Game:
         self.board[cell[0]][cell[1]] = sth
 
         return cell
-
-    def move(self, action):
-        """Take a direction to move.
-        
-        Args:
-            action: The indics of the direction to move, between 0 and 3.
-        """
-        self.steps += 1
-        direction = DIRECTIONS[action]
-        self.head = (self.head[0] + direction[0], self.head[1] + direction[1])
-        self.snake.insert(0, self.head)
-        
-        if self.head == self.food:  # Eat the food.
-            self.score += 1
-            self.place_food()
-        else:
-            tail = self.snake.pop()
-            self.available_places[tail] = 1
-            if not self.head in self.available_places:  # Hit the wall or itself.
-                self.game_over = True  
-            else:
-                self.available_places.pop(self.head)
-            
-            # Check if arises infinate loop.
-            if (self.head, self.food) not in self.uniq:
-                self.uniq.append((self.head,self.food))
-                del self.uniq[0]
-            else:
-                self.game_over = True
-
-    def get_state(self):
-        # Head direction.
-        head_direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
-        i = DIRECTIONS.index(head_direction)
-        head_dir = [0.0, 0.0, 0.0, 0.0]
-        head_dir[i] = 1.0
-
-        # Tail direction.
-        tail_direction = (self.snake[-2][0] - self.snake[-1][0], self.snake[-2][1] - self.snake[-1][1])
-        i = DIRECTIONS.index(tail_direction)
-        tail_dir = [0.0, 0.0, 0.0, 0.0]
-        tail_dir[i] = 1.0
-
-        state = []
-
-        # Vision.
-        dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
-                [0, 1], [-1, 1], [-1, 0], [-1, -1]]
-        
-        for dir in dirs:
-            x = self.head[0] + dir[0]
-            y = self.head[1] + dir[1]
-            dis = 1.0
-            see_food = 0.0
-            see_self = 0.0
-            dis_to_food = np.inf
-            dis_to_self = np.inf
-            while x < self.X and x >= 0 and y < self.Y and y >= 0:
-                if self.food == (x, y):
-                    see_food = 1.0  
-                    dis_to_food = dis
-                elif not (x, y) in self.available_places:
-                    see_self = 1.0 
-                    dis_to_self = dis
-                dis += 1
-                x += dir[0]
-                y += dir[1]
-            state += [1.0/dis, see_food, see_self]
-        state += head_dir + tail_dir
-
-        return state
 
 if __name__ == '__main__':
     game = Game()

@@ -23,6 +23,7 @@ class Individual:
         self.score = 0
         self.steps = 0
         self.seed = None
+        self.competitor = None
     
     def get_fitness(self):
         """Get the fitness of Individual.
@@ -108,10 +109,16 @@ class GA:
         return selection
 
     def compete(self, p1, p2):
+        p1.competitor = p2
+        p1.order = 0
+        p2.competitor = p1
+        p2.order = 1
+
         game = Game_Noui()
 
-        # To be changed.
-        p1.score, p1.steps, p2.score, p2.steps = game.play(p1.nn, p2.nn)
+        # To be changed, change nn to genes.
+        p1.score, p1.steps, p2.score, p2.steps, seed = game.play(p1.nn, p2.nn)
+        p1.seed = p2.seed = seed
         #print("FUCK", p1.score, p1.steps, p2.score, p2.steps)
         p1.get_fitness()
         p2.get_fitness() 
@@ -185,8 +192,13 @@ if __name__ == '__main__':
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
             #ga.save_best(ga.best_individual.score)
-            #if args.show:
-            #    game.play(ga.best_individual.nn, ga.best_individual.seed)
+            if args.show:
+                nn1 = ga.best_individual.nn
+                nn2 = ga.best_individual.competitor.nn
+                seed = ga.best_individual.seed
+                if ga.best_individual.order == 1:
+                    nn1, nn2, = nn2, nn1
+                game.play(nn1, nn2, seed)
         
         # Save the population every 20 generation.
         #if generation % 20 == 0:

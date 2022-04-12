@@ -32,15 +32,16 @@ class Snake:
 
         has_eat = False
         if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
-            board[head[0]][head[1]] != -1):  # Hit the wall or itself or other.
+            (board[head[0]][head[1]] != -1 and board[head[0]][head[1]] != FOOD)):  # Hit the wall or itself or other.
             self.snake.pop()
             self.dead = True
         else:
-            tail = self.snake.pop()
-            board[tail[0]][tail[1]] = -1
             if board[head[0]][head[1]] == 2:  # Eat the food.
                 self.score += 1
                 has_eat = True
+            else:
+                tail = self.snake.pop()
+                board[tail[0]][tail[1]] = -1
 
             board[head[0]][head[1]] = self.id
 
@@ -145,7 +146,7 @@ class Game:
         self.new(nn1, nn2)
         while True:
             self._event()
-            first_to_move = random.randint(0, 1)
+            first_to_move = self.rand.randint(0, 1)
             has_eat1 = has_eat2 = False
 
             snake1 = self.snakes[first_to_move]
