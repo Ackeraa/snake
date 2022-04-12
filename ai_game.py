@@ -5,6 +5,90 @@ import numpy as np
 import os
 import torch
 
+class Snake:
+
+    def __init__(self, id, pos, direction, nn):
+        self.id = id
+        self.snake = [pos]
+        self.direction = direction
+        self.nn = nn
+        self.score = 0
+        self.steps = 0
+
+    def move(self, board):
+        """Take a direction to move.
+        
+        Args:
+            action: The indics of the direction to move, between 0 and 3.
+        """
+        self.steps += 1
+        state = self.get_state(board)
+        action = self.nn.predict(state) 
+        self.direction = DIRECTIONS[action]
+        head = (self.snake[0][0] + self.direction[0], self.snake[0][1] + self.direction[1])
+        self.snake.insert(0, head)
+        
+        if board[head[0]][head[1]] == 2:  # Eat the food.
+            self.score += 1
+            board[head[0]][head[1]] = self.id
+
+            return True
+        else:
+            tail = self.snake.pop()
+            board[tail[0]][tail[1]] = -1
+            if head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= :  # Hit the wall or itself.
+                self.game_over = True  
+            else:
+                board[head[0]][head[1]] = self.id
+
+            return False
+
+    def get_state(self, board):
+        # Head direction.
+        head_direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
+        i = DIRECTIONS.index(head_direction)
+        head_dir = [0.0, 0.0, 0.0, 0.0]
+        head_dir[i] = 1.0
+
+        # Tail direction.
+        tail_direction = (self.snake[-2][0] - self.snake[-1][0], self.snake[-2][1] - self.snake[-1][1])
+        i = DIRECTIONS.index(tail_direction)
+        tail_dir = [0.0, 0.0, 0.0, 0.0]
+        tail_dir[i] = 1.0
+
+        state = [head_dir, tail_dir]
+        
+        # Vision.
+        dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
+                [0, 1], [-1, 1], [-1, 0], [-1, -1]]
+        
+        for dir in dirs:
+            x = self.snake[0][0] + dir[0]
+            y = self.snake[0][1] + dir[1]
+            dis = 1.0
+            see_food = 0.0
+            see_self = 0.0
+            see_other = 0.0
+            dis_to_food = np.inf
+            dis_to_self = np.inf
+            dis_to_other = np.inf
+            while x < self.X and x >= 0 and y < self.Y and y >= 0:
+                if board[x][y] == FOOD:
+                    see_food = 1.0  
+                    dis_to_food = dis
+                elif board[x][y] = self.id:
+                    see_self = 1.0 
+                    dis_to_self = dis
+                elif board[x][y] != -1:
+                    see_other = 1.0
+                    dis_to_other = dis
+                dis += 1
+                x += dir[0]
+                y += dir[1]
+            state += [1.0/dis, see_food, see_self, see_other]
+        
+        return state
+
 class Game:
     """This Class is for visualization of the AI snake movement.
 
@@ -42,16 +126,10 @@ class Game:
         self.clock = pg.time.Clock()
         self.font_name = pg.font.match_font(FONT_NAME)
 
-        self.score = 0
-        self.steps = 0
-        self.head1 = None
-        self.head2 = None
-        self.snake1 = []
-        self.snake2 = []
-        self.direction1 = None
-        self.direction2 = None
+        self.snakes = []
         self.food = None
         self.available_places = {}
+        self.board = []
         self.game_over = False
         self.win = False
 
@@ -64,15 +142,20 @@ class Game:
                   It is used for reproduction.      
         """
         self.rand = random.Random(seed)
-        self.new()
+        self.new(nn1, nn2)
         while not self.game_over:
             self._event()
-            state1 = self.get_state(self.snake1)
-            action1 = nn1.predict(state1)
-            state2 = self.get_state(self.snake2)
-            action2 = nn2.predict(state2)
-            self.move(self.snake1, action1)
-            self.move(self.snake2, action2)
+            first_to_move = random.randint(0, 1)
+
+            snake1 = self.snakes[first_to_move]
+            has_eat1 = snake1.move(self.board)
+
+            snake2 = self.snakes[first_to_move^1]
+            has_eat2 = snake2.move(self.board)
+
+            if has_eat1 or has_eat2:
+                self.place_sth(FOOD)  # Place food.
+
             self._draw()
 
     def play_saved_model(self, score):
@@ -90,106 +173,43 @@ class Game:
  
         self.play(nn, seed)
 
-    def new(self):
+    def new(self, nn1, nn2):
         self.game_over = False
         self.win = False
-        self.snake1 = []
-        self.snake2 = []
-        self.steps = 0
-        self.score = 0
         self.available_places = {}
         for x in range(self.X):
             for y in range(self.Y):
                 self.available_places[(x, y)] = 1
 
-        # Create new snake.
-        self.head = (x, y)
-        direction = DIRECTIONS[self.rand.randint(0, 3)]
-        body1 = (self.head[0] - direction[0], self.head[1] - direction[1])
-        body2 = (body1[0] - direction[0], body1[1] - direction[1])
-        self.snake.append(self.head)
-        self.snake.append(body1)
-        self.snake.append(body2)
+        # empty: -1, snake1: 0, snake2: 1, food: 2
+        self.board = [[-1 for _ in range(self.X)] for _ in range(self.Y)]
 
-        # Update places available to move or place food.
-        self.available_places.pop(self.head)
-        self.available_places.pop(body1)
-        self.available_places.pop(body2)
+        # Create new snakes, both with 1 length.
+        self.snakes = []
+        head1 = self.place_sth(0)
+        direction1 = DIRECTIONS[self.rand.randint(0, 3)]
+        self.snakes.append(Snake(head1, direction1, nn1))
+                                                                 
+        head2 = self.place_sth(1)
+        direction2 = DIRECTIONS[self.rand.randint(0, 3)]
+        self.snakes.append(Snake(head2, direction2, nn2))
         
-        self.place_food()
+        place_sth(FOOD)  # Place food.
   
-    def place_food(self):
-        if len(self.available_places) == 0:
+    def place_sth(self, sth):
+        empty_cells = []
+        for x in range(self.X):
+            for y in range(self.Y):
+                if self.board[x][y] == -1:
+                    empty_cells.append((x, y))
+        if empty_cells == []:
             self.game_over = True
-            self.win = True
-            return 
-        possible_places = sorted(list(self.available_places.keys()))
-        self.food = self.rand.choice(possible_places)
-        self.available_places.pop(self.food)
+            return
 
-    def move(self, action):      
-        """Take a direction to move.
-        
-        Args:
-            action: The indics of the direction to move, between 0 and 3.
-        """
-        self.steps += 1
-        self.direction = DIRECTIONS[action]
-        self.head = (self.head[0] + self.direction[0], self.head[1] + self.direction[1])
-        self.snake.insert(0, self.head)
-        
-        if self.head == self.food:  # Eat the food.
-            self.score += 1
-            self.place_food()
-        else:
-            tail = self.snake.pop()
-            self.available_places[tail] = 1
-            if not self.head in self.available_places:  # Hit the wall or itself.
-                self.game_over = True  
-            else:
-                self.available_places.pop(self.head)
+        cell = self.rand.choice(empty_cells)
+        self.board[cell[0]][cell[1]] = sth
 
-    def get_state(self):
-        # Head direction.
-        head_direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
-        i = DIRECTIONS.index(head_direction)
-        head_dir = [0.0, 0.0, 0.0, 0.0]
-        head_dir[i] = 1.0
 
-        # Tail direction.
-        tail_direction = (self.snake[-2][0] - self.snake[-1][0], self.snake[-2][1] - self.snake[-1][1])
-        i = DIRECTIONS.index(tail_direction)
-        tail_dir = [0.0, 0.0, 0.0, 0.0]
-        tail_dir[i] = 1.0
-
-        state = []
-        
-        # Vision.
-        dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
-                [0, 1], [-1, 1], [-1, 0], [-1, -1]]
-        
-        for dir in dirs:
-            x = self.head[0] + dir[0]
-            y = self.head[1] + dir[1]
-            dis = 1.0
-            see_food = 0.0
-            see_self = 0.0
-            dis_to_food = np.inf
-            dis_to_self = np.inf
-            while x < self.X and x >= 0 and y < self.Y and y >= 0:
-                if self.food == (x, y):
-                    see_food = 1.0  
-                    dis_to_food = dis
-                elif not (x, y) in self.available_places:
-                    see_self = 1.0 
-                    dis_to_self = dis
-                dis += 1
-                x += dir[0]
-                y += dir[1]
-            state += [1.0/dis, see_food, see_self]
-        state += head_dir + tail_dir
-        
-        return state
 
     def _get_xy(self, pos):
         """Transform pos to the coordinates of pygame."""
