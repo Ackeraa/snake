@@ -162,7 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--choice', default='generate', 
                          help=" 'generate' to generate new ancestor, 'inherit' to load from path ./all_individual.")
 
-    parser.add_argument('-s', '--show', default=True, type=bool, help='If show the best individual to  play snake after each envolve.')
+    parser.add_argument('-s', '--show', action="store_true", help='If show the best individual to  play snake after each envolve.')
     args = parser.parse_args()
 
     ga = GA()
