@@ -36,8 +36,9 @@ class Snake:
         else:
             tail = self.snake.pop()
             board[tail[0]][tail[1]] = -1
-            if head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= :  # Hit the wall or itself.
-                self.game_over = True  
+            if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
+                board[head[0]][head[1]] != -1):  # Hit the wall or itself or other.
+                self.game_over = True
             else:
                 board[head[0]][head[1]] = self.id
 
@@ -176,10 +177,6 @@ class Game:
     def new(self, nn1, nn2):
         self.game_over = False
         self.win = False
-        self.available_places = {}
-        for x in range(self.X):
-            for y in range(self.Y):
-                self.available_places[(x, y)] = 1
 
         # empty: -1, snake1: 0, snake2: 1, food: 2
         self.board = [[-1 for _ in range(self.X)] for _ in range(self.Y)]
@@ -209,8 +206,6 @@ class Game:
         cell = self.rand.choice(empty_cells)
         self.board[cell[0]][cell[1]] = sth
 
-
-
     def _get_xy(self, pos):
         """Transform pos to the coordinates of pygame."""
         x = pos[0] * GRID_SIZE
@@ -220,22 +215,22 @@ class Game:
     def _draw(self):
         self.screen.fill(BLACK)
         
-        # draw head
-        x, y = self._get_xy(self.snake[0])
+        # Draw head.
+        x, y = self._get_xy(self.snakes[0][0])
         pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
-        # draw body
+        # Draw body.
         for s in self.snake[1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
         
-        # draw food
+        # Draw food.
         x, y = self._get_xy(self.food)
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
-        # draw text
+        # Draw text.
         text = "score: " + str(self.score)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
