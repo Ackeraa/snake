@@ -155,7 +155,7 @@ class Game:
             has_eat2 = snake2.move(self.board)
 
             if has_eat1 or has_eat2:
-                self.place_sth(FOOD)  # Place food.
+                self.food = self.place_sth(FOOD)
 
             self._draw()
 
@@ -191,7 +191,7 @@ class Game:
         direction2 = DIRECTIONS[self.rand.randint(0, 3)]
         self.snakes.append(Snake(head2, direction2, nn2))
         
-        place_sth(FOOD)  # Place food.
+        self.food = place_sth(FOOD)
   
     def place_sth(self, sth):
         empty_cells = []
@@ -215,13 +215,24 @@ class Game:
     def _draw(self):
         self.screen.fill(BLACK)
         
-        # Draw head.
+        # Draw head1.
         x, y = self._get_xy(self.snakes[0][0])
         pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
-        # Draw body.
-        for s in self.snake[1:]:
+        # Draw body1.
+        for s in self.snakes[0][1:]:
+            x, y = self._get_xy(s)
+            pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+            pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+
+        # Draw head2.
+        x, y = self._get_xy(self.snakes[1][0])
+        pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+        pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+
+        # Draw body2.
+        for s in self.snakes[1][1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
