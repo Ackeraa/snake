@@ -2,7 +2,6 @@ import random
 import argparse
 import numpy as np
 from nn import Net
-from ai_game import Game
 from ai_game_noui import Game as Game_Noui 
 from settings import *
 import torch
@@ -32,9 +31,8 @@ class Individual:
            game and use the Neural Network to play, finally use the reward function to
            calculate its fitness.
         """
-        score = self.score
+        score = self.score + 1
         steps = self.steps
-        print("score", score, "steps", steps)
         self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
  
 class GA:
@@ -116,7 +114,6 @@ class GA:
         p1.score, p1.steps, p2.score, p2.steps = game.play(p1.nn, p2.nn)
         #print("FUCK", p1.score, p1.steps, p2.score, p2.steps)
         p1.get_fitness()
-        print("FFF", p1.fitness)
         p2.get_fitness() 
 
     def evolve(self):
@@ -128,7 +125,6 @@ class GA:
         self.population = self.elitism_selection(self.p_size)  # Select parents to generate children.
         self.best_individual = self.population[0]
         random.shuffle(self.population)
-        print("FUCK", len(self.population))
 
         # Generate children.
         children = []
@@ -167,7 +163,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--choice', default='generate', 
                          help=" 'generate' to generate new ancestor, 'inherit' to load from path ./all_individual.")
 
-    parser.add_argument('-s', '--show', default=True, type=bool, help='If show the best individual to  play snake after each envolve.')
+    parser.add_argument('-s', '--show', action="store_true", help='If show the best individual to  play snake after each envolve.')
     args = parser.parse_args()
 
     ga = GA()
@@ -177,6 +173,7 @@ if __name__ == '__main__':
     else:
         ga.inherit_ancestor()
     if args.show:
+        from ai_game import Game
         game = Game()
 
     generation = 0
@@ -188,8 +185,8 @@ if __name__ == '__main__':
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
             #ga.save_best(ga.best_individual.score)
-            if args.show:
-                game.play(ga.best_individual.nn, ga.best_individual.seed)
+            #if args.show:
+            #    game.play(ga.best_individual.nn, ga.best_individual.seed)
         
         # Save the population every 20 generation.
         #if generation % 20 == 0:
