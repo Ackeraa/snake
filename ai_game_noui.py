@@ -151,6 +151,7 @@ class Game:
                 x += dir[0]
                 y += dir[1]
             state += [1.0/dis, see_food, see_self]
+            #state += [1.0/dis, 1.0/dis_to_food, 1.0/dis_to_self]
         state += head_dir + tail_dir
 
         return state
