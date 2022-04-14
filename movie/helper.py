@@ -1,6 +1,13 @@
 from manim import *
 import math
 from queue import Queue
+import random
+
+def random_color1(visible):
+    if not visible:
+        return BLACK
+    colors = ['#FF8080', '#00FF00', '#A6CF8C', '#699C52', '#58C4DD', '#F0AC5F', '#E8C11C', '#B189C6', '#FF0000', '#C55F73']
+    return random.choice(colors)
 
 def get_array(size, square_size=1, color=WHITE, stroke_width=3):
     return VGroup(*[Square(square_size, stroke_width=stroke_width).set_color(color) for _ in range(size)]).arrange(RIGHT, buff=0)
@@ -35,8 +42,8 @@ class NN(VGroup):
         super().__init__(vg)
 
 class Grid(VGroup):
-    def __init__(self, size=0.6, text="", color=WHITE):
-        square = Square(size).set_color(color)
+    def __init__(self, size=0.6, text="", color=WHITE, stroke_width=3):
+        square = Square(size, stroke_width=stroke_width).set_color(color)
         self.number = text
         text = Text(str(text), color=color).scale(size/2).move_to(square.get_center())
         self.text = text
@@ -49,7 +56,6 @@ class Grid(VGroup):
 
 class Info(VGroup):
     def __init__(self, text="", pos=RIGHT*5, color=TEAL_D):
-        self.color = color
         self.pos = pos
         self.text = Text(text, color=color, font_size=20)
         self.text.shift(self.pos)
@@ -60,7 +66,77 @@ class Info(VGroup):
         self.text.shift(self.pos)
 
 class Array(VGroup):
-    def __init__(self, length, texts, size=0.6, color=WHITE):
+    def __init__(self, length, texts, size=0.6, color=WHITE, stroke_width=3, direction=RIGHT):
         super().__init__()
         for i in range(length):
-            self.add(Grid(size, texts[i], color)).arrange(RIGHT, buff=0)
+            self.add(Grid(size, texts[i], color, stroke_width=stroke_width)).arrange(direction, buff=0)
+
+class Individual(VGroup):
+    def __init__(self, happy=True, visible=True):
+        super().__init__()
+        head = Circle(stroke_width=2).set_color(random_color1(visible))
+        eyes = VGroup(Line(LEFT*0.2, RIGHT*0.2, stroke_width=1, color = random_color1(visible)),
+                      Line(LEFT*0.2, RIGHT*0.2, stroke_width=1, color = random_color1(visible)))\
+                      .arrange(RIGHT, buff=0.6).shift(UP*0.3)
+        mouth = Triangle(stroke_width=1).scale(0.3).shift(DOWN*0.5).set_color(random_color1(visible))
+        self.happy = happy
+        if happy:
+            mouth.rotate(180*DEGREES).shift(DOWN*0.1)
+        arm1 = Line(UP*0.24+RIGHT*0.84, LEFT*0.7+DOWN*0.2, stroke_width=2,
+                    color = random_color1(visible)).shift(DOWN*1.25+LEFT*0.85)
+        arm2 = Line(UP*0.24+LEFT*0.84, RIGHT*0.7+DOWN*0.2, stroke_width=2,
+                    color = random_color1(visible)).shift(DOWN*1.25+RIGHT*0.85)
+        leg1 = Line(UP, DOWN*0.8, stroke_width=2, color = random_color1(visible)).shift(DOWN*2.2+LEFT*0.7)
+        leg2 = Line(UP, DOWN*0.8, stroke_width=2, color = random_color1(visible)).shift(DOWN*2.2+RIGHT*0.7)
+
+        self.add(head, eyes[0], eyes[1], mouth, arm1, arm2, leg1, leg2)
+
+    def turn_mouth(self):
+        if self.happy:
+            self[3].rotate(180*DEGREES)
+        else:
+            self[3].rotate(180*DEGREES).shift(DOWN*0.1)
+
+
+class Genes(VGroup):
+    def __init__(self, n=10):
+        super().__init__()
+        v = [round(random.random(),3) for _ in range(n)]
+        v[n//2] = '...'
+        p = Array(n, v, stroke_width=1, direction=DOWN)
+        self.add(p)
+
+class NN(VGroup):
+    def __init__(self):
+        super().__init__()
+        nn = VGroup()
+        struct = [21, 14, 8, 4]
+        #buffs = [0.1, 0.3, 0.3, 0.3]
+        for i in range(4):
+            nn.add(VGroup(*[Circle(0.06, color=WHITE, stroke_width=1.5) 
+                for _ in range(struct[i])]).arrange(DOWN, buff=0.1)).arrange(RIGHT, 1)
+        nn.shift(LEFT * 2)
+        self.add(nn)
+
+        nn_edges = VGroup()
+        for i in range(3):
+            for j in range(struct[i]):
+                for k in range(struct[i + 1]):
+                    e = Line(nn[i][j], nn[i + 1][k], stroke_width=0.3, color=WHITE)
+                    self.add(e)
+
+class Game(VGroup):
+    def __init__(self):
+        super().__init__()
+        matrix = get_matrix(10, 0.7, GRAY, stroke_width=1).scale(0.2)
+        matrix[5][5].set_fill(WHITE, opacity=1)
+        matrix[5][6].set_fill(PURE_BLUE, opacity=1)
+        matrix[4][6].set_fill(PURE_BLUE, opacity=1)
+        matrix[2][2].set_fill(PURE_RED, opacity=1)
+        self.add(matrix)
+
+class Ellipsi(VGroup):
+    def __init__(self, color=WHITE):
+        super().__init__()
+        text = Text("...", color=color)
+        self.add(text)
