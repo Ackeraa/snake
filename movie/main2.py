@@ -14,6 +14,7 @@ class CodeFromString(Scene):
             font="Monospace",
             language="Python",
         )
+        code = MyCode("test.py")
         code.shift(LEFT * 2 + UP * 2)
         code.width=6
         self.add(code)
@@ -22,7 +23,9 @@ class CodeFromString(Scene):
 class Main(Scene):
     def construct(self):
         self.info = Info("")
-        self.add_flow()
+        #self.add_flow()
+        self.add_code_pic()
+        self.add_snake()
 
         self.wait()
 
@@ -184,6 +187,7 @@ class Main(Scene):
 
         #self.play(ReplacementTransform(fits, population))
         #self.play(FadeOut(*self.mobjects[1:]), population.animate.shift(RIGHT*3).scale(2))
+        saved_mobjects = self.mobjects[1:].copy()
         self.remove(*self.mobjects[1:])
         population.shift(RIGHT*3).scale(2)
 
@@ -250,6 +254,52 @@ class Main(Scene):
         # arm
         anims.append(FadeOut(children[13][6]))
 
+        self.play(*anims)
+        
+        # New population.
+        anims = []
+        for i, x in enumerate(dies):
+            population[x] = children[i].copy().move_to(population[x])
+            anims.append(ReplacementTransform(children[i], population[x]))
+        self.play(*anims)
+
+        # Next generation.
+        population.shift(LEFT*3).scale(0.5)
+        self.add(*saved_mobjects)
+
+        self.remove(*self.m_objects)
+
+    def add_code_pic(self):
+
+        code1 = MyCode("snake_1.py")
+        code2 = MyCode("nn_1.py")
+        code3 = MyCode("main_1.py")
+        self.codes = VGroup(code1, code2, code3).arrange(RIGHT, buff=1).scale(0.7)
+
+        title1 = MathTex("snake.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code1, UP*0.2)
+        title2 = MathTex("nn.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code2, UP*0.2)
+        title3 = MathTex("main.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code3, UP*0.2)
+        self.codes_title = VGroup(title1, title2, title3)
+        self.add(self.codes_title)
+
+        t1 = Text("实现贪吃蛇", font_size=16, color=TEAL_D).next_to(title1, UP)
+        t2 = Text("实现神经网络", font_size=16, color=TEAL_D).next_to(title2, UP)
+        t3 = Text("实现遗传算法", font_size=16, color=TEAL_D).next_to(title3, UP)
+        self.codes_desc = VGroup()
+        self.codes_desc.add(t1, t2, t3)
+        #self.play(FadeIn(t1))
+
+        self.add(self.codes, self.codes_desc)
+    
+    def add_snake(self):
+    
+        title = MathTex("snake.py", font_size=32).set_color([BLUE_E, TEAL_D]).shift(UP*3.5)
+        anims = []
+        anims.append(self.codes[0].animate.shift(LEFT*0.2+UP).scale(1.1))
+        anims.append(ReplacementTransform(self.codes_title[0], title))
+        anims.append(FadeOut(self.codes[1:]))
+        anims.append(FadeOut(self.codes_title[1:]))
+        anims.append(FadeOut(self.codes_desc))
         self.play(*anims)
 
 class Test(Scene):

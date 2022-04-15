@@ -140,3 +140,16 @@ class Ellipsi(VGroup):
         super().__init__()
         text = Text("...", color=color)
         self.add(text)
+
+class MyCode(Code):
+    def __init__(self, code, font_size=24, bkg="Window"):
+        super().__init__(
+            code,
+            font_size=font_size,
+            tab_width=4,
+            insert_line_no=False,
+            background=bkg,
+            style=Code.styles_list[14],
+            font="Monospace",
+            language="Python",
+        )
