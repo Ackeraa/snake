@@ -1,4 +1,5 @@
 import random
+from re import S
 import pygame as pg
 from settings import *
 import numpy as np
@@ -51,6 +52,7 @@ class Game:
         self.available_places = {}
         self.game_over = False
         self.win = False
+        self.uniq = None
 
     def play(self, nn, seed=None):
         """Use the Neural Network to play the game.
@@ -91,6 +93,7 @@ class Game:
         self.steps = 0
         self.score = 0
         self.available_places = {}
+        self.uniq = [0] * (self.X * self.Y - 2)
         for x in range(self.X):
             for y in range(self.Y):
                 self.available_places[(x, y)] = 1
@@ -129,7 +132,16 @@ class Game:
             action: The indics of the direction to move, between 0 and 3.
         """
         self.steps += 1
-        self.direction = DIRECTIONS[action]
+        #self.direction = DIRECTIONS[action]
+        direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
+        idx = DIRECTIONS.index(direction)
+        if action == 1:    # Turn left.
+            direction = DIRECTIONS[(idx - 2 + 4) % 4]
+        elif action == 2:  # Turn right.
+            direction = DIRECTIONS[(idx + 1) % 4]
+        # else keep straight.
+
+        self.direction = direction
         self.head = (self.head[0] + self.direction[0], self.head[1] + self.direction[1])
         self.snake.insert(0, self.head)
         
@@ -144,6 +156,12 @@ class Game:
             else:
                 self.available_places.pop(self.head)
 
+            # Check if arises infinate loop.
+            if (self.head, self.food) not in self.uniq:
+                self.uniq.append((self.head,self.food))
+                del self.uniq[0]
+            else:
+                self.game_over = True
     def get_state(self):
         # Head direction.
         head_direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])

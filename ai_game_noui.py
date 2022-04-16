@@ -91,7 +91,17 @@ class Game:
             action: The indics of the direction to move, between 0 and 3.
         """
         self.steps += 1
-        direction = DIRECTIONS[action]
+        #direction = DIRECTIONS[action]
+        direction = (self.snake[0][0] - self.snake[1][0], self.snake[0][1] - self.snake[1][1])
+        idx = DIRECTIONS.index(direction)
+        if action == 1:    # Turn left.
+            direction = DIRECTIONS[(idx - 2 + 4) % 4]
+        elif action == 2:  # Turn right.
+            direction = DIRECTIONS[(idx + 1) % 4]
+        # else keep straight.
+
+        self.direction = direction
+
         self.head = (self.head[0] + direction[0], self.head[1] + direction[1])
         self.snake.insert(0, self.head)
         
