@@ -18,18 +18,24 @@ class Snake:
         """Take a direction to move.
         
         Args:
-            action: The indics of the direction to move, between 0 and 3.
+            action: The the action of next move, 0: keeep straight, 1: turn left, 2: turn right.
         """
         self.steps += 1
         state = self.get_state(board)
         action = self.nn.predict(state) 
-        self.direction = DIRECTIONS[action]
+        idx = DIRECTIONS.index(self.direction)
+        if action == 1:    # Turn left.
+            self.direction = DIRECTIONS[(idx - 2 + 4) % 4]
+        elif action == 2:  # Turn right.
+            self.direction = DIRECTIONS[(idx + 1) % 4]
+        # else keep straight.
+
         head = (self.snake[0][0] + self.direction[0], self.snake[0][1] + self.direction[1])
         self.snake.insert(0, head)
 
         has_eat = False
         if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
-            (board[head[0]][head[1]] != -1 and board[head[0]][head[1]] != FOOD)):  # Hit the wall or itself or other.
+            board[head[0]][head[1]] == self.id):  # Hit the wall or itself or other.
             self.snake.pop()
             self.dead = True
         else:
@@ -92,7 +98,7 @@ class Snake:
                 dis += 1
                 x += dir[0]
                 y += dir[1]
-            state += [1.0/dis, see_food, see_self, see_other]
+            state += [1.0/dis, see_food, see_self]
         
         return state
 
@@ -127,30 +133,24 @@ class Game:
         self.seed = random.randint(-1000000000, 1000000000)
         self.rand = random.Random(self.seed)
 
-    def play(self, nn1, nn2):
-        self.new(nn1, nn2)
+    def play(self, nn):
+        self.new(nn)
         while True:
-            first_to_move = self.rand.randint(0, 1)
-            has_eat1 = has_eat2 = False
+            has_eat = False
 
-            snake1 = self.snakes[first_to_move]
-            if not snake1.dead:
-                has_eat1 = snake1.move(self.board, self.food)
+            snake = self.snakes[0]
+            if not snake.dead:
+                has_eat = snake.move(self.board, self.food)
 
-            snake2 = self.snakes[first_to_move^1]
-            if not snake2.dead:
-                has_eat2 = snake2.move(self.board, self.food)
-
-            if snake1.dead and snake2.dead:
+            if snake.dead:
                 break
 
-            if has_eat1 or has_eat2:
+            if has_eat:
                 self.food = self.place_sth(FOOD)
 
-        return self.snakes[0].score, self.snakes[0].steps,\
-               self.snakes[1].score, self.snakes[1].steps, self.seed
+        return self.snakes[0].score, self.snakes[0].steps, self.seed
 
-    def new(self, nn1, nn2):
+    def new(self, nn):
         # empty: -1, snake1: 0, snake2: 1, food: 2
         self.board = [[-1 for _ in range(self.X)] for _ in range(self.Y)]
 
@@ -158,11 +158,7 @@ class Game:
         self.snakes = []
         head1 = self.place_sth(0)
         direction1 = DIRECTIONS[self.rand.randint(0, 3)]
-        self.snakes.append(Snake(0, head1, direction1, nn1))
-                                                                 
-        head2 = self.place_sth(1)
-        direction2 = DIRECTIONS[self.rand.randint(0, 3)]
-        self.snakes.append(Snake(1, head2, direction2, nn2))
+        self.snakes.append(Snake(0, head1, direction1, nn))
         
         self.food = self.place_sth(FOOD)
 

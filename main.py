@@ -3,6 +3,8 @@ import argparse
 import numpy as np
 from nn import Net
 from ai_game_noui import Game as Game_Noui 
+from ai_game_noui2 import Game as Game_Noui2 
+from ai_game import Game
 from settings import *
 import torch
 import os
@@ -32,10 +34,10 @@ class Individual:
            game and use the Neural Network to play, finally use the reward function to
            calculate its fitness.
         """
-        score = self.score + 1
+        score = self.score
         steps = self.steps
         self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
- 
+    
 class GA:
     """Genetic Algorithm.
 
@@ -123,11 +125,22 @@ class GA:
         p1.get_fitness()
         p2.get_fitness() 
 
+    def compete0(self, p):
+        game = Game_Noui()
+        p.score, p.steps, p.seed = game.play(p.nn)
+        p.get_fitness()
+
     def evolve(self):
         sum_score = 0
-        for i in range(len(self.population) - 1):
-            self.compete(self.population[i], self.population[i + 1])
-            sum_score += self.population[i].score + self.population[i + 1].score
+        # for individual in self.population:
+        #     self.compete0(individual)
+        # self.population = self.elitism_selection(self.p_size + self.c_size)
+
+        for i in range(len(self.population)):
+            #self.compete(self.population[i], self.population[i + 1])
+            self.compete0(self.population[i])
+            #sum_score += self.population[i].score + self.population[i + 1].score
+            sum_score += self.population[i].score
         self.avg_score = sum_score / len(self.population)
         self.population = self.elitism_selection(self.p_size)  # Select parents to generate children.
         self.best_individual = self.population[0]
@@ -158,7 +171,7 @@ class GA:
     def save_all(self):
         """Save the population."""
         for individual in self.population:
-            individual.get_fitness()
+            self.compete0(individual)
         population = self.elitism_selection(self.p_size)
         for i in range(len(population)):
             pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
@@ -191,17 +204,17 @@ if __name__ == '__main__':
         print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
-            #ga.save_best(ga.best_individual.score)
+            ga.save_best(ga.best_individual.score)
             if args.show:
                 nn1 = ga.best_individual.nn
-                nn2 = ga.best_individual.competitor.nn
+                #nn2 = ga.best_individual.competitor.nn
                 seed = ga.best_individual.seed
-                if ga.best_individual.order == 1:
-                    nn1, nn2, = nn2, nn1
-                game.play(nn1, nn2, seed)
+                # if ga.best_individual.order == 1:
+                    # nn1, nn2, = nn2, nn1
+                game.play(nn1, seed)
         
         # Save the population every 20 generation.
-        #if generation % 20 == 0:
-        #    ga.save_all()
+        if generation % 20 == 0:
+            ga.save_all()
 
 

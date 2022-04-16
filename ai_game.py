@@ -16,32 +16,45 @@ class Snake:
         self.score = 0
         self.steps = 0
         self.dead = False
+        self.uniq = [0] * 100
 
-    def move(self, board):
+    def move(self, board, food):
         """Take a direction to move.
         
         Args:
-            action: The indics of the direction to move, between 0 and 3.
+            action: The the action of next move, 0: keeep straight, 1: turn left, 2: turn right.
         """
         self.steps += 1
         state = self.get_state(board)
         action = self.nn.predict(state) 
-        self.direction = DIRECTIONS[action]
+        idx = DIRECTIONS.index(self.direction)
+        if action == 1:    # Turn left.
+            self.direction = DIRECTIONS[(idx - 1 + 4) % 4]
+        elif action == 2:  # Turn right.
+            self.direction = DIRECTIONS[(idx + 1) % 4]
+        # else keep straight.
         head = (self.snake[0][0] + self.direction[0], self.snake[0][1] + self.direction[1])
         self.snake.insert(0, head)
 
         has_eat = False
         if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
-            (board[head[0]][head[1]] != -1 and board[head[0]][head[1]] != FOOD)):  # Hit the wall or itself or other.
+            board[head[0]][head[1]] == self.id):  # Hit the wall or itself or other.
             self.snake.pop()
             self.dead = True
         else:
-            if board[head[0]][head[1]] == 2:  # Eat the food.
+            if board[head[0]][head[1]] == FOOD:  # Eat the food.
                 self.score += 1
                 has_eat = True
             else:
                 tail = self.snake.pop()
                 board[tail[0]][tail[1]] = -1
+
+                # Check if arises infinate loop.
+                if (head, food) not in self.uniq:
+                    self.uniq.append((head, food))
+                    del self.uniq[0]
+                else:                         # Infinate loop.
+                    self.dead = True
 
             board[head[0]][head[1]] = self.id
 
@@ -61,7 +74,7 @@ class Snake:
         tail_dir[i] = 1.0
         '''
         state = head_dir
-        
+
         # Vision.
         dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
                 [0, 1], [-1, 1], [-1, 0], [-1, -1]]
@@ -89,7 +102,7 @@ class Snake:
                 dis += 1
                 x += dir[0]
                 y += dir[1]
-            state += [1.0/dis, see_food, see_self, see_other]
+            state += [1.0/dis, see_food, see_self]
         
         return state
 
@@ -134,7 +147,7 @@ class Game:
         self.food = None
         self.board = []
 
-    def play(self, nn1, nn2, seed=None):
+    def play(self, nn, seed=None):
         """Use the Neural Network to play the game.
 
         Args:
@@ -143,30 +156,24 @@ class Game:
                   It is used for reproduction.      
         """
         self.rand = random.Random(seed)
-        self.new(nn1, nn2)
+        self.new(nn)
         while True:
             self._event()
-            first_to_move = self.rand.randint(0, 1)
-            has_eat1 = has_eat2 = False
+            has_eat = False
 
-            snake1 = self.snakes[first_to_move]
-            if not snake1.dead:
-                has_eat1 = snake1.move(self.board)
+            snake = self.snake
+            if not snake.dead:
+                has_eat = snake.move(self.board, self.food)
 
-            snake2 = self.snakes[first_to_move^1]
-            if not snake2.dead:
-                has_eat2 = snake2.move(self.board)
-
-            if snake1.dead and snake2.dead:
+            if snake.dead:
                 break
 
-            if has_eat1 or has_eat2:
+            if has_eat:
                 self.food = self.place_sth(FOOD)
 
             self._draw()
 
-        return self.snakes[0].score, self.snakes[0].steps,\
-               self.snakes[1].score, self.snakes[1].steps, 
+        return self.snake.score, self.snake.steps, None
 
     def play_saved_model(self, score):
         """Use the saved Neural Network model play the game.
@@ -183,19 +190,14 @@ class Game:
  
         self.play(nn, seed)
 
-    def new(self, nn1, nn2):
+    def new(self, nn):
         # empty: -1, snake1: 0, snake2: 1, food: 2
         self.board = [[-1 for _ in range(self.X)] for _ in range(self.Y)]
 
         # Create new snakes, both with 1 length.
-        self.snakes = []
-        head1 = self.place_sth(0)
-        direction1 = DIRECTIONS[self.rand.randint(0, 3)]
-        self.snakes.append(Snake(0, head1, direction1, nn1))
-                                                                 
-        head2 = self.place_sth(1)
-        direction2 = DIRECTIONS[self.rand.randint(0, 3)]
-        self.snakes.append(Snake(1, head2, direction2, nn2))
+        head = self.place_sth(0)
+        direction = DIRECTIONS[self.rand.randint(0, 3)]
+        self.snake = Snake(0, head, direction, nn)
         
         self.food = self.place_sth(FOOD)
   
@@ -224,35 +226,23 @@ class Game:
         self.screen.fill(BLACK)
         
         # Draw head1.
-        if not self.snakes[0].dead:
-            x, y = self._get_xy(self.snakes[0].snake[0])
+        if not self.snake.dead:
+            x, y = self._get_xy(self.snake.snake[0])
             pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
         # Draw body1.
-        for s in self.snakes[0].snake[1:]:
+        for s in self.snake.snake[1:]:
             x, y = self._get_xy(s)
             pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
-        # Draw head2.
-        if not self.snakes[1].dead:
-            x, y = self._get_xy(self.snakes[1].snake[0])
-            pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-            pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
-
-        # Draw body2.
-        for s in self.snakes[1].snake[1:]:
-            x, y = self._get_xy(s)
-            pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-            pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
-        
         # Draw food.
         x, y = self._get_xy(self.food)
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
         # Draw text.
-        text = "score1: " + str(self.snakes[0].score) +  "   score2: " + str(self.snakes[1].score)
+        text = "score: " + str(self.snake.score)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
         text_rect = text_surface.get_rect()
@@ -282,5 +272,6 @@ class Game:
 if __name__ == '__main__':
 
     g = Game() 
-    g.play_saved_model(97)
+    #g.play_saved_model(97)
+    g.play(1, 1)
     pg.quit()
