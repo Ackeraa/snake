@@ -27,18 +27,21 @@ class Snake:
         self.steps += 1
         state = self.get_state(board)
         action = self.nn.predict(state) 
-        idx = DIRECTIONS.index(self.direction)
-        if action == 1:    # Turn left.
-            self.direction = DIRECTIONS[(idx - 1 + 4) % 4]
-        elif action == 2:  # Turn right.
-            self.direction = DIRECTIONS[(idx + 1) % 4]
+
+        self.direction = DIRECTIONS[action]
+
+        # idx = DIRECTIONS.index(self.direction)
+        # if action == 1:    # Turn left.
+        #     self.direction = DIRECTIONS[(idx - 1 + 4) % 4]
+        # elif action == 2:  # Turn right.
+        #     self.direction = DIRECTIONS[(idx + 1) % 4]
         # else keep straight.
         head = (self.snake[0][0] + self.direction[0], self.snake[0][1] + self.direction[1])
         self.snake.insert(0, head)
 
         has_eat = False
         if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
-            board[head[0]][head[1]] == self.id):  # Hit the wall or itself or other.
+            (board[head[0]][head[1]] != FOOD and board[head[0]][head[1]] != -1)):  # Hit the wall or itself or other.
             self.snake.pop()
             self.dead = True
         else:
@@ -157,7 +160,7 @@ class Game:
         """
         self.rand = random.Random(seed)
         self.new(nn1, nn2)
-        while True:
+        while self.food is not None:
             self._event()
             first_to_move = self.rand.randint(0, 1)
             has_eat1 = has_eat2 = False
@@ -165,10 +168,20 @@ class Game:
             snake1 = self.snakes[first_to_move]
             if not snake1.dead:
                 has_eat1 = snake1.move(self.board, self.food)
+                if snake1.dead:
+                    for x in range(self.X):
+                        for y in range(self.Y):
+                            if self.board[x][y] == snake1.id:
+                                self.board[x][y] = -1
 
             snake2 = self.snakes[first_to_move^1]
             if not snake2.dead:
                 has_eat2 = snake2.move(self.board, self.food)
+                if snake2.dead:
+                    for x in range(self.X):
+                        for y in range(self.Y):
+                            if self.board[x][y] == snake2.id:
+                                self.board[x][y] = -1
 
             if snake1.dead and snake2.dead:
                 break
@@ -187,10 +200,10 @@ class Game:
         Args:
             score: Specify which model to load, also indicates the highest score it can get.
         """
-        model_pth = os.path.join("model", "best_individual", "nn_"+str(score)+'.pth')
+        model_pth = os.path.join("model0", "best_individual", "nn_"+str(score)+'.pth')
         nn = torch.load(model_pth)
 
-        seed_pth = os.path.join("seed", "seed_"+str(score)+'.txt')  # Get the seed for reproduction.
+        seed_pth = os.path.join("seed0", "seed_"+str(score)+'.txt')  # Get the seed for reproduction.
         with open(seed_pth, "r") as f:
             seed = int(f.read())
  
@@ -219,8 +232,7 @@ class Game:
                 if self.board[x][y] == -1:
                     empty_cells.append((x, y))
         if empty_cells == []:
-            self.game_over = True
-            return
+            return None
 
         cell = self.rand.choice(empty_cells)
         self.board[cell[0]][cell[1]] = sth
@@ -254,12 +266,12 @@ class Game:
             pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
             pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
-        # Draw body2.
-        for s in self.snakes[1].snake[1:]:
-            x, y = self._get_xy(s)
-            pg.draw.rect(self.screen, GREEN1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-            pg.draw.rect(self.screen, GREEN2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
-        
+            # Draw body2.
+            for s in self.snakes[1].snake[1:]:
+                x, y = self._get_xy(s)
+                pg.draw.rect(self.screen, GREEN1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+                pg.draw.rect(self.screen, GREEN2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+
         # Draw food.
         x, y = self._get_xy(self.food)
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
@@ -295,6 +307,5 @@ class Game:
 if __name__ == '__main__':
 
     g = Game() 
-    #g.play_saved_model(97)
-    g.play(1, 1)
+    g.play_saved_model(15)
     pg.quit()

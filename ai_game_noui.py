@@ -23,13 +23,13 @@ class Snake:
         self.steps += 1
         state = self.get_state(board)
         action = self.nn.predict(state) 
-        idx = DIRECTIONS.index(self.direction)
-        if action == 1:    # Turn left.
-            self.direction = DIRECTIONS[(idx - 2 + 4) % 4]
-        elif action == 2:  # Turn right.
-            self.direction = DIRECTIONS[(idx + 1) % 4]
-        # else keep straight.
-
+        #idx = DIRECTIONS.index(self.direction)
+        # if action == 1:    # Turn left.
+        #     self.direction = DIRECTIONS[(idx - 2 + 4) % 4]
+        # elif action == 2:  # Turn right.
+        #     self.direction = DIRECTIONS[(idx + 1) % 4]
+        # # else keep straight.
+        self.direction = DIRECTIONS[action]
         head = (self.snake[0][0] + self.direction[0], self.snake[0][1] + self.direction[1])
         self.snake.insert(0, head)
 

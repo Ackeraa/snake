@@ -204,7 +204,7 @@ if __name__ == '__main__':
         print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
-            ga.save_best(ga.best_individual.score)
+            #ga.save_best(ga.best_individual.score)
             if args.show:
                 nn1 = ga.best_individual.nn
                 #nn2 = ga.best_individual.competitor.nn
@@ -214,7 +214,7 @@ if __name__ == '__main__':
                 game.play(nn1, seed)
         
         # Save the population every 20 generation.
-        if generation % 20 == 0:
-            ga.save_all()
+        # if generation % 20 == 0:
+        #     ga.save_all()
 
 

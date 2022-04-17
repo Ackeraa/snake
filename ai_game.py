@@ -27,12 +27,14 @@ class Snake:
         self.steps += 1
         state = self.get_state(board)
         action = self.nn.predict(state) 
-        idx = DIRECTIONS.index(self.direction)
-        if action == 1:    # Turn left.
-            self.direction = DIRECTIONS[(idx - 1 + 4) % 4]
-        elif action == 2:  # Turn right.
-            self.direction = DIRECTIONS[(idx + 1) % 4]
+        # idx = DIRECTIONS.index(self.direction)
+        # if action == 1:    # Turn left.
+        #     self.direction = DIRECTIONS[(idx - 1 + 4) % 4]
+        # elif action == 2:  # Turn right.
+        #     self.direction = DIRECTIONS[(idx + 1) % 4]
         # else keep straight.
+
+        self.direction = DIRECTIONS[action]
         head = (self.snake[0][0] + self.direction[0], self.snake[0][1] + self.direction[1])
         self.snake.insert(0, head)
 
@@ -181,10 +183,10 @@ class Game:
         Args:
             score: Specify which model to load, also indicates the highest score it can get.
         """
-        model_pth = os.path.join("model", "best_individual", "nn_"+str(score)+'.pth')
+        model_pth = os.path.join("model0", "best_individual", "nn_"+str(score)+'.pth')
         nn = torch.load(model_pth)
 
-        seed_pth = os.path.join("seed", "seed_"+str(score)+'.txt')  # Get the seed for reproduction.
+        seed_pth = os.path.join("seed0", "seed_"+str(score)+'.txt')  # Get the seed for reproduction.
         with open(seed_pth, "r") as f:
             seed = int(f.read())
  
@@ -272,6 +274,5 @@ class Game:
 if __name__ == '__main__':
 
     g = Game() 
-    #g.play_saved_model(97)
-    g.play(1, 1)
+    g.play_saved_model(15)
     pg.quit()
