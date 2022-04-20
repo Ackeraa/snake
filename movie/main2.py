@@ -3,7 +3,7 @@ from helper import *
 import random
 import math
 
-class CodeFromString(Scene):
+class CodeFromString():
     def construct(self):
         code = Code(
             "test.py",
@@ -20,17 +20,18 @@ class CodeFromString(Scene):
         self.add(code)
         self.wait()
 
-class Main(Scene):
+class Main(MovingCameraScene):
     def construct(self):
         self.info = Info("")
         #self.add_flow()
         self.add_code_pic()
-        self.add_snake()
+        #self.add_snake()
+        self.add_nn()
 
         self.wait()
 
-    def info_update(self, text):
-        self.play(self.info.animate.update_text(text))
+    def info_update(self, text, pos=None, font_size=20):
+        self.play(self.info.animate.update_text(text, pos, font_size))
 
     def add_flow(self):
 
@@ -280,7 +281,7 @@ class Main(Scene):
         title2 = MathTex("nn.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code2, UP*0.2)
         title3 = MathTex("main.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code3, UP*0.2)
         self.codes_title = VGroup(title1, title2, title3)
-        self.add(self.codes_title)
+        #self.add(self.codes_title)
 
         t1 = Text("实现贪吃蛇", font_size=16, color=TEAL_D).next_to(title1, UP)
         t2 = Text("实现神经网络", font_size=16, color=TEAL_D).next_to(title2, UP)
@@ -289,11 +290,11 @@ class Main(Scene):
         self.codes_desc.add(t1, t2, t3)
         #self.play(FadeIn(t1))
 
-        self.add(self.codes, self.codes_desc)
+        #self.add(self.codes, self.codes_desc)
     
     def add_snake(self):
     
-        title = MathTex("snake.py", font_size=32).set_color([BLUE_E, TEAL_D]).shift(UP*3.5)
+        title = MathTex("snake.py", font_size=28).set_color([BLUE_E, TEAL_D]).shift(UP*3.5)
         anims = []
         anims.append(self.codes[0].animate.shift(LEFT*0.2+UP).scale(1.1))
         anims.append(ReplacementTransform(self.codes_title[0], title))
@@ -301,10 +302,336 @@ class Main(Scene):
         anims.append(FadeOut(self.codes_title[1:]))
         anims.append(FadeOut(self.codes_desc))
         self.play(*anims)
+    
+    def add_nn(self):
 
-class Test(Scene):
+        # Introduce code structure.
+        '''
+        anims = []
+        anims.append(FadeIn(self.codes[1:]))
+        anims.append(FadeIn(self.codes_title[1:]))
+        anims.append(FadeIn(self.codes_desc[1:]))
+        self.play(*anims)
+
+        anims = []
+        title = MathTex("nn.py", font_size=28).set_color([BLUE_E, TEAL_D]).shift(UP*3.7)
+        code = MyCode("nn_2.py").scale(0.6).shift(LEFT * 3 + UP * 1.9)
+        anims.append(ReplacementTransform(self.codes[1], code))
+        anims.append(ReplacementTransform(self.codes_title[1], title))
+        anims.append(FadeOut(self.codes[2]))
+        anims.append(FadeOut(self.codes_title[2]))
+        anims.append(FadeOut(self.codes_desc[1:]))
+        self.play(*anims)
+        '''
+        code = MyCode("nn_2.py").shift(LEFT * 3)
+        self.add(code)
+
+        anims = []
+        lines = [5, 8, 11, 14]
+        infos = ["初始化神经网络", "设置神经网络权重", "前向传播", "进行预测"]
+        arr = CodeArr(code, lines[0])
+        '''
+        self.play(FadeIn(arr))
+        self.info_update(infos[0])
+        for i in range(1, len(lines)):
+            self.play(arr.move(lines[i]))
+            self.info_update(infos[i])
+            self.wait()
+        '''
+
+        # Introduce code detail.
+
+        ## __init__
+        code3 = MyCode("nn_3.py").code.shift(LEFT * 3)
+
+        #self.play(FadeOut(code.code[6:], shift=DOWN))
+        self.remove(code.code[6:])#
+        code.code[6:] = code3[6:]
+        #self.play(Create(code.code[36:]), run_time=3)
+        self.add(code.code[36:]) #
+        w_bs = [0.2, 0.3, 0.2, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
+        ws = [0.2, 0.3, 0.5, 0.1, 0.6, 0.2]
+        bs = [0.2, 0.5, 0.3, 0.1, 0.8] 
+        weights = Array(11, w_bs, size=0.5, stroke_width=2).shift(RIGHT*4+UP*3)
+        self.add(weights) #
+        arr = CodeArr(code, 38)
+        '''
+        self.play(FadeIn(arr))
+        self.play(ReplacementTransform(code.code[38].copy(), weights))
+        self.wait()
+        self.play(arr.move(39))
+        self.wait()
+        self.play(arr.move(5))
+        self.play(FadeIn(code.code[6:20], shift=UP))
+        '''
+        # nn
+        nn = VGroup()
+        struct = [1, 2, 1, 2]
+        for i in range(4):
+            nn.add(VGroup(*[Circle(0.3, color=WHITE, stroke_width=2) 
+                for _ in range(struct[i])]).arrange(DOWN, buff=1)).arrange(RIGHT, 0.5)
+        nn.shift(RIGHT * 4 + UP * 0.2)
+
+        nn_edges = VGroup()
+        ws_vg = VGroup()
+        cnt = 0
+        for i in range(3):
+            edges = VGroup()
+            vg = VGroup()
+            for j in range(struct[i]):
+                for k in range(struct[i + 1]):
+                    e = Line(nn[i][j], nn[i + 1][k], stroke_width=2, color=WHITE)
+                    text = MathTex(str(ws[cnt]), color=WHITE, font_size=16).next_to(e, DOWN * 0.05)
+                    cnt += 1
+                    vg.add(text)
+                    edges.add(e)
+                ws_vg.add(vg)
+
+            nn_edges.add(edges)
+
+        b = Circle(0.2, color=WHITE, stroke_width=2)
+        t = Text("b", font_size=14).move_to(b)
+        nn_b = VGroup(*[VGroup(b.copy(), t.copy()) for _ in range(3)]).arrange(RIGHT, buff=0.68)
+        nn_b.shift(RIGHT * 3.7 + UP*2)
+        nn_bedges = VGroup()
+        bs_vg = VGroup()
+        cnt = 0
+        for i in range(3):
+            vg = VGroup()
+            vg1 = VGroup()
+            for j in range(struct[i + 1]):
+                e = DashedLine(nn_b[i], nn[i + 1][j], stroke_width=2, color=WHITE)
+                text = MathTex(str(bs[cnt]), color=WHITE, font_size=16).move_to(e).shift(UP * 0.3)
+                cnt += 1
+                vg.add(e)
+                vg1.add(text)
+            bs_vg.add(vg1)
+            nn_bedges.add(vg)
+
+        self.add(nn, nn_edges, nn_b, nn_bedges)
+
+        '''
+        self.play(arr.move(6))
+        for i in range(4):
+            self.play(arr.move(8 + i))
+            if n != 3:
+                self.play(FadeIn(nn[i]), FadeIn(nn_b[i]))
+            else:
+                self.play(FadeIn(nn[i]))
+
+        for i in range(3):
+            self.play(arr.move(13 + i))
+            self.play(FadeIn(nn_edges[i]), FadeIn(nn_bedges[i]))
+        '''
+        self.add(nn, nn_edges, nn_b, nn_bedges) #
+
+        # activate function
+        #self.play(arr.move(17))
+        ax = Axes(
+            x_range=(-0.2, 1.2, 0.2),
+            y_range=(-0.2, 1.2, 0.2),
+            axis_config={
+                'color': GREY_A,
+                'stroke_width': 2,
+            },
+        )
+        ax.scale(0.2).shift(RIGHT*2.5+DOWN*2)
+        relu = ax.plot(
+            lambda x: max(x, 0),
+            use_smoothing=False,
+            color=BLUE,
+            stroke_width=2,
+        )
+        #self.play(Write(ax, lag_ratio=0.01, run_time=1))
+        #self.play(Create(relu))
+
+        #self.play(arr.move(18))
+        ax2 = Axes(
+            x_range=(-10, 10, 2),
+            y_range=(-0.2, 1, 0.2),
+            axis_config={
+                'color': GREY_A,
+                'stroke_width': 2,
+            },
+        )
+        ax2.scale(0.2).shift(RIGHT*5.5+DOWN*2)
+        sigmod = ax2.plot(
+            lambda x: 1.0 / (1.0 + math.exp(-x)),
+            color=BLUE,
+            stroke_width=2,
+        )
+        #self.play(Write(ax2, lag_ratio=0.01, run_time=1))
+        #self.play(Create(sigmod))
+        self.add(ax, ax2, relu, sigmod) #
+
+        ## set_weight
+        #self.play(arr.move(20))
+        #self.play(FadeOut(code.code[6:21], shift=DOWN), FadeOut(arr))
+        code4 = MyCode("nn_4.py").code.shift(LEFT * 3)
+        #code.code[6:19] = code4[6:19]
+        #self.play(FadeIn(code.code[6:19], shift=UP))
+        '''
+        arr.move(5, animate=False)
+        self.play(arr.move(6))
+        self.play(Indicate(weights, color=TEAL_D))
+        self.play(arr.move(7))
+        indics = [2, 4, 6, 7, 9]
+        texts = ["x", "xx", "y", "yy", "z"]
+        ar = Arrow(start=UP*0.2, end=DOWN*0.1, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.3)
+        for i in range(5):
+            self.play(arr.move(8 + i))
+            vg = VGroup(MathTex(texts[i], font_size=18, color=GREEN_B),
+                        ar.copy()).arrange(DOWN, buff=0.1)
+            vg.next_to(weights[indics[i]], UP*0.1).shift(weights[i].width / 2 * LEFT)
+            self.play(FadeIn(vg, shift=DOWN))
+
+        indics = [0, 2, 4, 6, 7, 9, 11]
+        for i in range(3):
+            l = indics[2*i]
+            r = indics[2*i+1]
+            rr = indics[2*i+2]
+            self.play(arr.move(13 + 2 * i))
+            self.play(ReplacementTransform(weights[l:r].copy(), ws_vg[i]))
+            self.play(arr.move(13 + 2 * i + 1))
+            self.play(ReplacementTransform(weights[r:rr].copy(), bs_vg[i]))
+        '''
+
+        ## predict & forward
+        self.play(arr.move(38))
+        self.play(FadeOut(code.code[5:21], shift=DOWN))
+        code5 = MyCode("nn_5.py").code.shift(LEFT * 3)
+        code.code[5:20] = code5[5:20]
+        self.play(FadeIn(code.code[5:9], shift=UP), arr.move(5))
+        self.play(arr.move(6))
+        t_in = Text("1", font_size=18).move_to(nn[0][0])
+        self.play(arr.move(7))
+        self.play(ReplacementTransform(code.code[7][9:14].copy(), t_in))
+        self.play(FadeIn(code.code[9:19], shift=UP), arr.move(10))
+
+
+class Test2(Scene):
     def construct(self):
+        code = MyCode("nn_2.py")
+        self.add(code)
         c = Circle()
-        hair = VGroup(Line(UP*0.24+LEFT*0.84, RIGHT*0.7+DOWN*0.2, stroke_width=2),
-                      Line(UP*0.24+RIGHT*0.84, LEFT*0.7+DOWN*0.2, stroke_width=2).shift(RIGHT*1.4)).scale(0.3)
-        self.add(hair)
+        self.play(ReplacementTransform(code.code[5][0:6], c))
+
+class Test(MovingCameraScene):
+    def construct(self):
+        ax = Axes(
+            x_range=(-0.2, 1.2, 0.2),
+            y_range=(-0.2, 1.2, 0.2),
+            axis_config={
+                'color': GREY_A,
+                'stroke_width': 2,
+            },
+        )
+        ax.scale(0.2).shift(RIGHT*2+DOWN*2)
+        relu = ax.plot(
+            lambda x: max(x, 0),
+            use_smoothing=False,
+            color=BLUE,
+            stroke_width=2,
+        )
+        ax2 = Axes(
+            x_range=(-10, 10, 2),
+            y_range=(-0.2, 1, 0.2),
+            axis_config={
+                'color': GREY_A,
+                'stroke_width': 2,
+            },
+        )
+        ax2.scale(0.2).shift(RIGHT*5+DOWN*2)
+        sigmod = ax2.plot(
+            lambda x: 1.0 / (1.0 + math.exp(-x)),
+            color=BLUE,
+            stroke_width=2,
+        )
+        # self.play(Write(ax, lag_ratio=0.01, run_time=1))
+        # self.play(Create(relu))
+        self.add(ax, relu)
+        self.add(ax2, sigmod)
+        # c = Circle()
+        w_bs = [0.2, 0.3, 0.2, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
+        ws = [0.2, 0.3, 0.5, 0.1, 0.6, 0.2]
+        bs = [0.2, 0.5, 0.3, 0.1, 0.8] 
+        a = Array(10, w_bs)
+        #self.add(a)
+
+        nn = VGroup()
+        struct = [1, 2, 1, 2]
+        for i in range(4):
+            nn.add(VGroup(*[Circle(0.3, color=WHITE, stroke_width=2) 
+                for _ in range(struct[i])]).arrange(DOWN, buff=1)).arrange(RIGHT, 0.5)
+        nn.shift(RIGHT * 4 + UP * 1)
+
+        nn_edges = VGroup()
+        ws_vg = VGroup()
+        cnt = 0
+        for i in range(3):
+            edges = VGroup()
+            vg = VGroup()
+            for j in range(struct[i]):
+                for k in range(struct[i + 1]):
+                    e = Line(nn[i][j], nn[i + 1][k], stroke_width=2, color=WHITE)
+                    text = MathTex(str(ws[cnt]), color=WHITE, font_size=16).next_to(e, DOWN * 0.05)
+                    cnt += 1
+                    vg.add(text)
+                    edges.add(e)
+                ws_vg.add(vg)
+
+            nn_edges.add(edges)
+
+        b = Circle(0.2, color=WHITE, stroke_width=2)
+        t = Text("b", font_size=14).move_to(b)
+        nn_b = VGroup(*[VGroup(b.copy(), t.copy()) for _ in range(3)]).arrange(RIGHT, buff=0.68)
+        nn_b.shift(RIGHT * 3.7 + UP * 2.6)
+        nn_bedges = VGroup()
+        bs_vg = VGroup()
+        cnt = 0
+        for i in range(3):
+            vg = VGroup()
+            vg1 = VGroup()
+            for j in range(struct[i + 1]):
+                e = DashedLine(nn_b[i], nn[i + 1][j], stroke_width=2, color=WHITE)
+                text = MathTex(str(bs[cnt]), color=WHITE, font_size=16).move_to(e).shift(UP * 0.3)
+                cnt += 1
+                vg.add(e)
+                vg1.add(text)
+            bs_vg.add(vg1)
+            nn_bedges.add(vg)
+
+        self.add(nn, nn_edges, nn_b, nn_bedges, ws_vg, bs_vg)
+        t_input = MathTex("1", font_size = 17, color=GREEN_C).move_to(nn[0][0]) 
+        self.add(t_input)
+
+        color = BLUE_E
+        run_time = 1
+
+        xs = [[0.4, 0.5], [0.55], [0.43, 0.91]]
+        for i in range(3):
+            self.play(ShowPassingFlash(nn_edges[i].copy().set_color(color),
+                                              run_time=run_time,
+                                              time_width=run_time),
+                      ShowPassingFlash(nn_bedges[i].copy().set_color(color),
+                                              run_time=run_time,
+                                              time_width=run_time),
+                      )
+            node_texts = VGroup()
+            x_dots = VGroup()
+            y_dots = VGroup()
+            lines = VGroup()
+            node_texts1 = VGroup()
+            for j in range(len(nn[i + 1])):
+                node_texts.add(MathTex(str(xs[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
+                x_dots.add(Dot(ax.coords_to_point(xs[i][j], 0), color=GREEN).scale(0.5))
+                y_dots.add(Dot(ax.coords_to_point(0, xs[i][j]), color=GREEN).scale(0.5))
+                lines.add(ax.get_lines_to_point(ax.c2p(xs[i][j],xs[i][j])))
+                node_texts1.add(MathTex(str(xs[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
+
+            self.play(FadeIn(node_texts))
+            self.play(Transform(node_texts, x_dots))
+            self.play(FadeIn(lines), FadeIn(y_dots))
+            self.play(Transform(y_dots, node_texts1))
+            self.remove(x_dots, y_dots, lines)

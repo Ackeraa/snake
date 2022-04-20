@@ -30,6 +30,7 @@ def get_node(size=1, color=WHITE):
 
     return node
 
+
 class NN(VGroup):
     def __init__(self, struct, size=0.05, color=BLUE):
         vg = VGroup()
@@ -61,8 +62,10 @@ class Info(VGroup):
         self.text.shift(self.pos)
         super().__init__(self.text)
     
-    def update_text(self, text):
-        self.text=self.text.become(Text(text, color=TEAL_D, font_size=20))
+    def update_text(self, text, pos=None, font_size=20):
+        if pos is not None:
+            self.pos = pos
+        self.text=self.text.become(Text(text, color=TEAL_D, font_size=font_size))
         self.text.shift(self.pos)
 
 class Array(VGroup):
@@ -142,14 +145,35 @@ class Ellipsi(VGroup):
         self.add(text)
 
 class MyCode(Code):
-    def __init__(self, code, font_size=24, bkg="Window"):
+    def __init__(self, code, font_size=12, bkg="rectangle"):
         super().__init__(
             code,
             font_size=font_size,
             tab_width=4,
             insert_line_no=False,
             background=bkg,
-            style=Code.styles_list[14],
+            style=Code.styles_list[13],
             font="Monospace",
+            background_stroke_color=BLUE_A,
             language="Python",
+            line_spacing=0.5,
+            margin=0.2,
         )
+        self.code[-1].set_fill(RED, opacity=0)
+        #self.background_mobject.set_fill(BLACK, opacity=0.1)
+
+class CodeArr(Triangle):
+    def __init__(self, code, line):
+        super().__init__(color=RED_E)
+        self.set_fill(RED, opacity=1).rotate(-90*DEGREES).scale(.03)
+        self.code = code
+        self.h = code.code[0].height
+        self.move(line, False)
+
+    def move(self, line, animate=True):
+        if animate:
+            return self.animate.next_to(self.code.code[line], LEFT*0.5).shift(
+                                DOWN*(self.code.code[line].height/2-self.h/1.8))
+        else:
+            return self.next_to(self.code.code[line], LEFT*0.5).shift(
+                                DOWN*(self.code.code[line].height/2-self.h/1.8))
