@@ -37,7 +37,7 @@ class Snake:
 
         has_eat = False
         if (head[0] < 0 or head[0] >= len(board) or head[1] < 0 or head[1] >= len(board[0]) or
-            (board[head[0]][head[1]] != FOOD and board[head[0]][head[1]] != -1)):  # Hit the wall or itself or other.
+            board[head[0]][head[1]] == self.id):  # Hit the wall or itself or other.
             self.snake.pop()
             self.dead = True
         else:
@@ -142,6 +142,8 @@ class Game:
             has_eat1 = has_eat2 = False
 
             snake1 = self.snakes[first_to_move]
+            snake2 = self.snakes[first_to_move^1]
+
             if not snake1.dead:
                 has_eat1 = snake1.move(self.board, self.food)
                 if snake1.dead:
@@ -149,8 +151,10 @@ class Game:
                         for y in range(self.Y):
                             if self.board[x][y] == snake1.id:
                                 self.board[x][y] = -1
+                if not snake2.dead:
+                    for pos in snake2.snake:
+                        self.board[pos[0]][pos[1]] = snake2.id
 
-            snake2 = self.snakes[first_to_move^1]
             if not snake2.dead:
                 has_eat2 = snake2.move(self.board, self.food)
                 if snake2.dead:
@@ -158,6 +162,9 @@ class Game:
                         for y in range(self.Y):
                             if self.board[x][y] == snake2.id:
                                 self.board[x][y] = -1
+                if not snake1.dead:
+                    for pos in snake1.snake:
+                        self.board[pos[0]][pos[1]] = snake1.id
 
             if snake1.dead and snake2.dead:
                 break

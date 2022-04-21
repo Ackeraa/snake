@@ -132,9 +132,9 @@ class GA:
 
     def evolve(self):
         sum_score = 0
-        # for individual in self.population:
-        #     self.compete0(individual)
-        # self.population = self.elitism_selection(self.p_size + self.c_size)
+        for individual in self.population:
+            self.compete0(individual)
+        self.population = self.elitism_selection(self.p_size + self.c_size)
 
         for i in range(len(self.population) - 1):
             self.compete(self.population[i], self.population[i + 1])
