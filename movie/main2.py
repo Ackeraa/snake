@@ -3,30 +3,14 @@ from helper import *
 import random
 import math
 
-class CodeFromString():
-    def construct(self):
-        code = Code(
-            "test.py",
-            tab_width=4,
-            insert_line_no=False,
-            background="Window",
-            style=Code.styles_list[14],
-            font="Monospace",
-            language="Python",
-        )
-        code = MyCode("test.py")
-        code.shift(LEFT * 2 + UP * 2)
-        code.width=6
-        self.add(code)
-        self.wait()
-
 class Main(MovingCameraScene):
     def construct(self):
         self.info = Info("")
         #self.add_flow()
         self.add_code_pic()
         #self.add_snake()
-        self.add_nn()
+        #self.add_nn()
+        self.add_main()
 
         self.wait()
 
@@ -272,12 +256,12 @@ class Main(MovingCameraScene):
 
     def add_code_pic(self):
 
-        code1 = MyCode("snake_1.py")
+        code1 = MyCode("ai_game_1.py")
         code2 = MyCode("nn_1.py")
         code3 = MyCode("main_1.py")
         self.codes = VGroup(code1, code2, code3).arrange(RIGHT, buff=1).scale(0.7)
 
-        title1 = MathTex("snake.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code1, UP*0.2)
+        title1 = MathTex("ai_game.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code1, UP*0.2)
         title2 = MathTex("nn.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code2, UP*0.2)
         title3 = MathTex("main.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code3, UP*0.2)
         self.codes_title = VGroup(title1, title2, title3)
@@ -315,7 +299,7 @@ class Main(MovingCameraScene):
 
         anims = []
         title = MathTex("nn.py", font_size=28).set_color([BLUE_E, TEAL_D]).shift(UP*3.7)
-        code = MyCode("nn_2.py").scale(0.6).shift(LEFT * 3 + UP * 1.9)
+        code = MyCode("nn_2.py").shift(LEFT * 3)
         anims.append(ReplacementTransform(self.codes[1], code))
         anims.append(ReplacementTransform(self.codes_title[1], title))
         anims.append(FadeOut(self.codes[2]))
@@ -551,8 +535,77 @@ class Main(MovingCameraScene):
         self.wait()
         self.play(Indicate(nn[3][1], color=TEAL_D))
 
-    def add_ga(self):
-        pass
+    def add_main(self):
+        # Introduce code structure.
+        '''
+        anims = []
+        anims.append(FadeIn(self.codes[2:]))
+        anims.append(FadeIn(self.codes_title[2:]))
+        anims.append(FadeIn(self.codes_desc[2:]))
+        self.play(*anims)
+
+        anims = []
+        title = MathTex("main.py", font_size=28).set_color([BLUE_E, TEAL_D]).shift(UP*3.7)
+        code = MyCode("main_2.py").shift(LEFT * 3)
+        anims.append(ReplacementTransform(self.codes[2], code))
+        anims.append(ReplacementTransform(self.codes_title[2], title))
+        anims.append(FadeOut(self.codes_desc[2:]))
+        self.play(*anims)
+        '''
+        code = MyCode("main_2.py").shift(LEFT * 3)
+        self.add(code)
+        anims = []
+        lines = [7, 10, 15, 19, 22, 25, 28, 31, 34]
+        infos = ["初始化个体", "计算个体适应度", "初始化遗传算法", "生成初始种群",
+                     "交叉", "变异", "精英选择", "轮盘赌选择", "进化"]
+        arr = CodeArr(code, lines[0])
+        '''
+        self.play(FadeIn(arr))
+        self.info_update(infos[0])
+        for i in range(1, len(lines)):
+            self.play(arr.move(lines[i]))
+            self.info_update(infos[i])
+            self.wait()
+        '''
+        # Individual
+        '''
+        self.play(FadeOut(code.code[13:37], shift=DOWN))
+        code3 = MyCode("main_3.py").code.shift(LEFT * 3)
+        self.play(ReplacementTransform(code.code[7:18], code3[7:18]))
+        self.wait()
+        self.play(Indicate(code3[8:12], color=RED))
+        self.info_update("初始化个体基因、得分、步数、随机数种子", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        self.play(Indicate(code3[14:17], color=RED))
+        self.info_update("进行一轮游戏，根据得分、步数计算适应度", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        code4 = MyCode("main_4.py").code.shift(LEFT * 3)
+        code.code[5:13] = code4[5:13]
+        self.play(FadeOut(code.code[5:18], shift=DOWN),
+                  FadeOut(code3[7:18], shiftt=DOWN),
+                  FadeIn(code.code[5:13], shift=UP))
+        '''
+        # GA
+        '''
+        self.play(FadeOut(code.code[5:37], shift=DOWN)) #
+        code4 = MyCode("main_4.py").code.shift(LEFT * 3)
+        code.code[5:21] = code4[5:21]
+        self.play(FadeIn(code.code[5:21], shift=UP))
+        self.play(Indicate(code.code[8:13], color=RED))
+        self.info_update("初始化种群大小、基因长度、变异概率等", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        self.play(Indicate(code.code[17:20], color=RED))
+        self.info_update("生成初始种群, 基因是(-1,1)区间均匀分布", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        '''
+
+        self.play(FadeOut(code.code[5:37], shift=DOWN)) #
+        code5 = MyCode("main_5.py").code.shift(LEFT * 3)
+        code.code[5:21] = code5[5:21]   # 5 need to change to 7
+        self.play(FadeIn(code.code[5:21], shift=UP)) # 5 need to change to 7
+
+
+
 
 class Test(ThreeDScene):
     def construct(self):
