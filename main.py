@@ -2,9 +2,6 @@ import random
 import argparse
 import numpy as np
 from nn import Net
-from ai_game_noui import Game as Game_Noui 
-from ai_game_noui2 import Game as Game_Noui2 
-from ai_game_noui_any import Game as Game_Noui_Any
 from ai_game import Game
 from settings import *
 import torch
@@ -21,11 +18,9 @@ class Individual:
     """
     def __init__(self, genes):
         self.genes = genes
-        self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT, genes.copy())
         self.score = 0
         self.steps = 0
         self.seed = None
-        self.competitor = None
     
     def get_fitness(self):
         """Get the fitness of Individual.
@@ -71,13 +66,9 @@ class GA:
     def inherit_ancestor(self):
         """Load genes(nn model parameters) from file."""
         for i in range(self.p_size):
-            pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
-            nn = torch.load(pth)
-            genes = []
-            with torch.no_grad():
-                for parameters in nn.parameters():
-                    genes.extend(parameters.numpy().flatten())
-            self.population.append(Individual(np.array(genes)))
+            pth = os.path.join("genes", "all", str(i))
+            genes = np.array(list(map(float, f.read().split())))
+            self.population.append(Individual(genes))
 
     def crossover(self, c1_genes, c2_genes):
         """Single point crossover."""
@@ -114,12 +105,12 @@ class GA:
         
         return selection
 
-    def competen(self, n):
-        game = Game_Noui_Any()
+    def compete(self, n=1):
+        game = Game()
         for i in range(0, len(self.population), n):
             competitors = [individual for individual in self.population[i : min(i + n, len(self.population))]]
-            nns = [individual.nn for individual in competitors]
-            score, steps, seed = game.play(nns)
+            genes_list = [individual.genes for individual in competitors]
+            score, steps, seed = game.play(genes_list)
             for i in range(len(score)):
                 competitors[i].score = score[i]
                 competitors[i].steps = steps[i]
@@ -136,7 +127,7 @@ class GA:
         #     self.compete0(individual)
         # self.population = self.elitism_selection(self.p_size + self.c_size)
 
-        self.competen(2)
+        self.compete(2)
         self.population = self.elitism_selection(self.p_size)  # Select parents to generate children.
         self.best_individual = self.population[0]
         random.shuffle(self.population)
@@ -157,20 +148,24 @@ class GA:
 
     def save_best(self, score):
         """Save the best individual that can get #score score so far."""
-        model_pth= os.path.join("model0", "best_individual", "nn_"+str(score)+".pth")
-        torch.save(self.best_individual.nn, model_pth)
-        seed_pth = os.path.join("seed0", "seed_"+str(score)+".txt")
+        genes_pth= os.path.join("genes", "best", str(score))
+        with open(genes_pth, "w") as f:
+            for gene in self.best_individual.genes:
+                f.write(str(gene) + " ") 
+        seed_pth = os.path.join("seed", str(score))
         with open(seed_pth, "w") as f:
             f.write(str(self.best_individual.seed)) 
     
     def save_all(self):
         """Save the population."""
         for individual in self.population:
-            self.compete0(individual)
+            self.compete(individual)
         population = self.elitism_selection(self.p_size)
         for i in range(len(population)):
-            pth = os.path.join("model0", "all_individual", str(i)+"_nn.pth")
-            torch.save(population[i].nn, pth)
+            pth = os.path.join("genes", "all", str(i))
+            with open(pth, "w") as f:
+                for gene in self.best_individual.genes:
+                    f.write(str(gene) + " ") 
 
 if __name__ == '__main__':
 

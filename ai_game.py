@@ -2,15 +2,15 @@ import pygame as pg
 import random
 from settings import *
 import numpy as np
+from nn import Net
 import torch
 import os
 
 class Snake:
 
-    def __init__(self, head, direction, nn, board_x, board_y):
+    def __init__(self, head, direction, genes, board_x, board_y):
         self.body = [head]
         self.direction = direction
-        self.nn = nn
         self.score = 0
         self.steps = 0
         self.gap_steps = 0
@@ -18,6 +18,7 @@ class Snake:
         self.uniq = [0] * 100
         self.board_x = board_x
         self.board_y = board_y
+        self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT, genes.copy())
 
     def move(self, food):
         """Take a direction to move.
@@ -140,7 +141,7 @@ class Game:
 
 
     # need to deleted.
-    def new(self, nns, seed):
+    def new(self, genes_list, seed):
         if seed is not None:
             self.seed = seed
             self.rand = random.Random(self.seed)
@@ -149,15 +150,15 @@ class Game:
         self.snakes = []
         self.best_score = 0
         board = [(x, y) for x in range(self.X) for y in range(self.Y)]
-        for nn in nns:
+        for genes in genes_list:
             head = self.rand.choice(board)
             direction = DIRECTIONS[self.rand.randint(0, 3)]
-            self.snakes.append(Snake(head, direction, nn, self.X, self.Y))
+            self.snakes.append(Snake(head, direction, genes, self.X, self.Y))
         
         self.food = self.rand.choice(board)
 
-    def play(self, nns, seed=None):
-        self.new(nns, seed)
+    def play(self, genes_list, seed=None):
+        self.new(genes_list, seed)
         board = [(x, y) for x in range(self.X) for y in range(self.Y)]
         #alive_snakes_set = set(self.rand.sample(self.snakes, len(self.snakes)))
         alive_snakes_set = set(self.snakes)
@@ -187,14 +188,15 @@ class Game:
         Args:
             score: Specify which model to load, also indicates the highest score it can get.
         """
-        model_pth = os.path.join("model0", "best_individual", "nn_"+str(score)+'.pth')
-        nn = torch.load(model_pth)
+        genes_pth = os.path.join("genes", "best", str(score))
+        with open(genes_pth, "r") as f:
+            genes = np.array(list(map(float, f.read().split())))
 
-        seed_pth = os.path.join("seed0", "seed_"+str(score)+'.txt')  # Get the seed for reproduction.
+        seed_pth = os.path.join("seed", str(score))  # Get the seed for reproduction.
         with open(seed_pth, "r") as f:
             seed = int(f.read())
  
-        self.play([nn], seed)
+        self.play([genes], seed)
 
     def _draw(self):
         self.screen.fill(BLACK)
@@ -209,10 +211,10 @@ class Game:
                 pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
                 pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
-            for s in snake.body[1:]:
-                x, y = get_xy(s)
-                pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-                pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+                for s in snake.body[1:]:
+                    x, y = get_xy(s)
+                    pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+                    pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
         # Draw food.
         x, y = get_xy(self.food)
