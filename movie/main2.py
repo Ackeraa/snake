@@ -447,7 +447,7 @@ class Main(MovingCameraScene):
 
         #self.play(arr.move(18))
         ax2 = Axes(
-            x_range=(-10, 10, 2),
+            x_range=(-5, 5, 1),
             y_range=(-0.2, 1, 0.2),
             axis_config={
                 'color': GREY_A,
@@ -516,6 +516,7 @@ class Main(MovingCameraScene):
         for i in range(3):
             axs = ax if i < 2 else ax2
             self.play(arr.move(11 + 2 * i))
+            self.wait()
             self.play(ShowPassingFlash(nn_edges[i].copy().set_color(color),
                                               run_time=run_time,
                                               time_width=run_time),
@@ -538,6 +539,7 @@ class Main(MovingCameraScene):
             self.play(FadeIn(node_texts))
             self.wait(0.5)
             self.play(arr.move(12 + 2 * i))
+            self.wait()
             self.play(ReplacementTransform(node_texts, x_dots))
             self.play(FadeIn(lines), FadeIn(y_dots))
             self.wait(0.5)
@@ -546,6 +548,7 @@ class Main(MovingCameraScene):
             self.wait(0.5)
 
         self.play(arr.move(8))
+        self.wait()
         self.play(Indicate(nn[3][1], color=TEAL_D))
 
     def add_ga(self):
