@@ -349,9 +349,9 @@ class Main(MovingCameraScene):
         code.code[6:] = code3[6:]
         #self.play(Create(code.code[36:]), run_time=3)
         self.add(code.code[36:]) #
-        w_bs = [0.2, 0.3, 0.2, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
+        w_bs = [0.2, 0.3, -0.3, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
         ws = [0.2, 0.3, 0.5, 0.1, 0.6, 0.2]
-        bs = [0.2, 0.5, 0.3, 0.1, 0.8] 
+        bs = [-0.3, 0.5, 0.3, 0.1, 0.8] 
         weights = Array(11, w_bs, size=0.5, stroke_width=2).shift(RIGHT*4+UP*3)
         self.add(weights) #
         arr = CodeArr(code, 38)
@@ -509,6 +509,47 @@ class Main(MovingCameraScene):
         self.play(ReplacementTransform(code.code[7][9:14].copy(), t_in))
         self.play(FadeIn(code.code[9:19], shift=UP), arr.move(10))
 
+        color = BLUE_E
+        run_time = 1
+        xs = [[-0.1, 0.8], [0.38], [0.328, 0.876]]
+        ys = [[0.0, 0.8], [0.38], [0.5813, 0.7060]]
+        for i in range(3):
+            axs = ax if i < 2 else ax2
+            self.play(arr.move(11 + 2 * i))
+            self.play(ShowPassingFlash(nn_edges[i].copy().set_color(color),
+                                              run_time=run_time,
+                                              time_width=run_time),
+                      ShowPassingFlash(nn_bedges[i].copy().set_color(color),
+                                              run_time=run_time,
+                                              time_width=run_time),
+                      )
+            node_texts = VGroup()
+            x_dots = VGroup()
+            y_dots = VGroup()
+            lines = VGroup()
+            node_texts1 = VGroup()
+            for j in range(len(nn[i + 1])):
+                node_texts.add(MathTex(str(xs[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
+                x_dots.add(Dot(axs.coords_to_point(xs[i][j], 0), color=GREEN).scale(0.5))
+                y_dots.add(Dot(axs.coords_to_point(0, ys[i][j]), color=GREEN).scale(0.5))
+                lines.add(axs.get_lines_to_point(axs.c2p(xs[i][j],ys[i][j])))
+                node_texts1.add(MathTex(str(ys[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
+
+            self.play(FadeIn(node_texts))
+            self.wait(0.5)
+            self.play(arr.move(12 + 2 * i))
+            self.play(ReplacementTransform(node_texts, x_dots))
+            self.play(FadeIn(lines), FadeIn(y_dots))
+            self.wait(0.5)
+            self.play(ReplacementTransform(y_dots, node_texts1))
+            self.remove(x_dots, lines)
+            self.wait(0.5)
+
+        self.play(arr.move(8))
+        self.play(Indicate(nn[3][1], color=TEAL_D))
+
+    def add_ga(self):
+        pass
 
 class Test2(Scene):
     def construct(self):
@@ -535,7 +576,7 @@ class Test(MovingCameraScene):
             stroke_width=2,
         )
         ax2 = Axes(
-            x_range=(-10, 10, 2),
+            x_range=(-5, 5, 1),
             y_range=(-0.2, 1, 0.2),
             axis_config={
                 'color': GREY_A,
@@ -553,9 +594,9 @@ class Test(MovingCameraScene):
         self.add(ax, relu)
         self.add(ax2, sigmod)
         # c = Circle()
-        w_bs = [0.2, 0.3, 0.2, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
+        w_bs = [0.2, 0.3, -0.3, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
         ws = [0.2, 0.3, 0.5, 0.1, 0.6, 0.2]
-        bs = [0.2, 0.5, 0.3, 0.1, 0.8] 
+        bs = [-0.3, 0.5, 0.3, 0.1, 0.8] 
         a = Array(10, w_bs)
         #self.add(a)
 
@@ -609,8 +650,10 @@ class Test(MovingCameraScene):
         color = BLUE_E
         run_time = 1
 
-        xs = [[0.4, 0.5], [0.55], [0.43, 0.91]]
+        xs = [[-0.1, 0.8], [0.38], [0.328, 0.876]]
+        ys = [[0.0, 0.8], [0.38], [0.5813, 0.7060]]
         for i in range(3):
+            axs = ax if i < 2 else ax2
             self.play(ShowPassingFlash(nn_edges[i].copy().set_color(color),
                                               run_time=run_time,
                                               time_width=run_time),
@@ -625,13 +668,16 @@ class Test(MovingCameraScene):
             node_texts1 = VGroup()
             for j in range(len(nn[i + 1])):
                 node_texts.add(MathTex(str(xs[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
-                x_dots.add(Dot(ax.coords_to_point(xs[i][j], 0), color=GREEN).scale(0.5))
-                y_dots.add(Dot(ax.coords_to_point(0, xs[i][j]), color=GREEN).scale(0.5))
-                lines.add(ax.get_lines_to_point(ax.c2p(xs[i][j],xs[i][j])))
-                node_texts1.add(MathTex(str(xs[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
+                x_dots.add(Dot(axs.coords_to_point(xs[i][j], 0), color=GREEN).scale(0.5))
+                y_dots.add(Dot(axs.coords_to_point(0, ys[i][j]), color=GREEN).scale(0.5))
+                lines.add(axs.get_lines_to_point(axs.c2p(xs[i][j],ys[i][j])))
+                node_texts1.add(MathTex(str(ys[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
 
             self.play(FadeIn(node_texts))
-            self.play(Transform(node_texts, x_dots))
+            self.wait(0.5)
+            self.play(ReplacementTransform(node_texts, x_dots))
             self.play(FadeIn(lines), FadeIn(y_dots))
-            self.play(Transform(y_dots, node_texts1))
-            self.remove(x_dots, y_dots, lines)
+            self.wait(0.5)
+            self.play(ReplacementTransform(y_dots, node_texts1))
+            self.remove(x_dots, lines)
+            self.wait(0.5)
