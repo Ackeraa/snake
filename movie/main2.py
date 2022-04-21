@@ -554,133 +554,26 @@ class Main(MovingCameraScene):
     def add_ga(self):
         pass
 
-class Test2(Scene):
+class Test(ThreeDScene):
     def construct(self):
-        code = MyCode("nn_2.py")
-        self.add(code)
-        c = Circle()
-        self.play(ReplacementTransform(code.code[5][0:6], c))
+        resolution_fa = 42
+        self.set_camera_orientation(theta=-70 * DEGREES, phi=75 * DEGREES)
 
-class Test(MovingCameraScene):
-    def construct(self):
-        ax = Axes(
-            x_range=(-0.2, 1.2, 0.2),
-            y_range=(-0.2, 1.2, 0.2),
-            axis_config={
-                'color': GREY_A,
-                'stroke_width': 2,
-            },
+        axes = ThreeDAxes(x_range=(1, 100), y_range=(0, 100), z_range=(0, 1)).scale(0.4)
+
+
+        surface = Surface(
+            lambda u, v: axes.c2p(*self.func(u, v)),
+            resolution=(resolution_fa, resolution_fa),
+            u_range=[1, 10],
+            v_range=[1, 10]
         )
-        ax.scale(0.2).shift(RIGHT*2+DOWN*2)
-        relu = ax.plot(
-            lambda x: max(x, 0),
-            use_smoothing=False,
-            color=BLUE,
-            stroke_width=2,
-        )
-        ax2 = Axes(
-            x_range=(-5, 5, 1),
-            y_range=(-0.2, 1, 0.2),
-            axis_config={
-                'color': GREY_A,
-                'stroke_width': 2,
-            },
-        )
-        ax2.scale(0.2).shift(RIGHT*5+DOWN*2)
-        sigmod = ax2.plot(
-            lambda x: 1.0 / (1.0 + math.exp(-x)),
-            color=BLUE,
-            stroke_width=2,
-        )
-        # self.play(Write(ax, lag_ratio=0.01, run_time=1))
-        # self.play(Create(relu))
-        self.add(ax, relu)
-        self.add(ax2, sigmod)
-        # c = Circle()
-        w_bs = [0.2, 0.3, -0.3, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
-        ws = [0.2, 0.3, 0.5, 0.1, 0.6, 0.2]
-        bs = [-0.3, 0.5, 0.3, 0.1, 0.8] 
-        a = Array(10, w_bs)
-        #self.add(a)
+        labels = axes.get_axis_labels(x_label='x')
 
-        nn = VGroup()
-        struct = [1, 2, 1, 2]
-        for i in range(4):
-            nn.add(VGroup(*[Circle(0.3, color=WHITE, stroke_width=2) 
-                for _ in range(struct[i])]).arrange(DOWN, buff=1)).arrange(RIGHT, 0.5)
-        nn.shift(RIGHT * 4 + UP * 1)
+        self.add(axes, surface, labels)
 
-        nn_edges = VGroup()
-        ws_vg = VGroup()
-        cnt = 0
-        for i in range(3):
-            edges = VGroup()
-            vg = VGroup()
-            for j in range(struct[i]):
-                for k in range(struct[i + 1]):
-                    e = Line(nn[i][j], nn[i + 1][k], stroke_width=2, color=WHITE)
-                    text = MathTex(str(ws[cnt]), color=WHITE, font_size=16).next_to(e, DOWN * 0.05)
-                    cnt += 1
-                    vg.add(text)
-                    edges.add(e)
-                ws_vg.add(vg)
-
-            nn_edges.add(edges)
-
-        b = Circle(0.2, color=WHITE, stroke_width=2)
-        t = Text("b", font_size=14).move_to(b)
-        nn_b = VGroup(*[VGroup(b.copy(), t.copy()) for _ in range(3)]).arrange(RIGHT, buff=0.68)
-        nn_b.shift(RIGHT * 3.7 + UP * 2.6)
-        nn_bedges = VGroup()
-        bs_vg = VGroup()
-        cnt = 0
-        for i in range(3):
-            vg = VGroup()
-            vg1 = VGroup()
-            for j in range(struct[i + 1]):
-                e = DashedLine(nn_b[i], nn[i + 1][j], stroke_width=2, color=WHITE)
-                text = MathTex(str(bs[cnt]), color=WHITE, font_size=16).move_to(e).shift(UP * 0.3)
-                cnt += 1
-                vg.add(e)
-                vg1.add(text)
-            bs_vg.add(vg1)
-            nn_bedges.add(vg)
-
-        self.add(nn, nn_edges, nn_b, nn_bedges, ws_vg, bs_vg)
-        t_input = MathTex("1", font_size = 17, color=GREEN_C).move_to(nn[0][0]) 
-        self.add(t_input)
-
-        color = BLUE_E
-        run_time = 1
-
-        xs = [[-0.1, 0.8], [0.38], [0.328, 0.876]]
-        ys = [[0.0, 0.8], [0.38], [0.5813, 0.7060]]
-        for i in range(3):
-            axs = ax if i < 2 else ax2
-            self.play(ShowPassingFlash(nn_edges[i].copy().set_color(color),
-                                              run_time=run_time,
-                                              time_width=run_time),
-                      ShowPassingFlash(nn_bedges[i].copy().set_color(color),
-                                              run_time=run_time,
-                                              time_width=run_time),
-                      )
-            node_texts = VGroup()
-            x_dots = VGroup()
-            y_dots = VGroup()
-            lines = VGroup()
-            node_texts1 = VGroup()
-            for j in range(len(nn[i + 1])):
-                node_texts.add(MathTex(str(xs[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
-                x_dots.add(Dot(axs.coords_to_point(xs[i][j], 0), color=GREEN).scale(0.5))
-                y_dots.add(Dot(axs.coords_to_point(0, ys[i][j]), color=GREEN).scale(0.5))
-                lines.add(axs.get_lines_to_point(axs.c2p(xs[i][j],ys[i][j])))
-                node_texts1.add(MathTex(str(ys[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
-
-            self.play(FadeIn(node_texts))
-            self.wait(0.5)
-            self.play(ReplacementTransform(node_texts, x_dots))
-            self.play(FadeIn(lines), FadeIn(y_dots))
-            self.wait(0.5)
-            self.play(ReplacementTransform(y_dots, node_texts1))
-            self.remove(x_dots, lines)
-            self.wait(0.5)
+    def func(self, u, v):
+        x = u
+        y = v
+        z = x / y + 0.2 * math.sqrt(math.log(10000)/y)
+        return np.array([x, y, z])

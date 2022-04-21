@@ -13,7 +13,6 @@ class Snake:
         self.direction = direction
         self.score = 0
         self.steps = 0
-        self.gap_steps = 0
         self.dead = False
         self.uniq = [0] * 100
         self.board_x = board_x
@@ -27,7 +26,6 @@ class Snake:
             action: The the action of next move, 0: keeep straight, 1: turn left, 2: turn right.
         """
         self.steps += 1
-        self.gap_steps += 1
         state = self.get_state(food)
         action = self.nn.predict(state) 
 
@@ -36,14 +34,13 @@ class Snake:
 
         has_eat = False
         if (head[0] < 0 or head[0] >= self.board_x or head[1] < 0 or head[1] >= self.board_y
-                or head in self.body):  # Hit the wall or itself.
+                or head in self.body[:-1]):  # Hit the wall or itself.
             self.dead = True
         else:
             self.body.insert(0, head)
-            if head == food:  # Eat the food.
+            if head == food:                  # Eat the food.
                 self.score += 1
                 has_eat = True
-                self.gap_steps = 0
             else:                             # Nothing happened.
                 self.body.pop()
                 # Check if arises infinate loop.
@@ -52,8 +49,6 @@ class Snake:
                     del self.uniq[0]
                 else:                         # Infinate loop.
                     self.dead = True
-                # if self.gap_steps > MAX_STEPS:
-                #     self.dead = True
 
         return has_eat
 
@@ -65,12 +60,25 @@ class Snake:
 
         '''
         # Tail direction.
-        tail_direction = (self.snake[-2][0] - self.snake[-1][0], self.snake[-2][1] - self.snake[-1][1])
+        if len(self.body) == 1:
+            tail_direction = self.direction
+        else:
+            tail_direction = (self.body[-2][0] - self.body[-1][0], self.body[-2][1] - self.body[-1][1])
         i = DIRECTIONS.index(tail_direction)
         tail_dir = [0.0, 0.0, 0.0, 0.0]
         tail_dir[i] = 1.0
         '''
-        state = head_dir
+        forward = (self.body[0][0] + self.direction[0],
+                   self.body[0][1] + self.direction[1])
+        forward_state = [0.0, 0.0, 0.0]  # is_food, is_body, is_tail
+        if forward == food:
+            forward_state[0] = 1.0
+        if forward in self.body:
+            forward_state[1] = 1.0
+        if forward == self.body[-1]:
+            forward_state[2] = 1.0
+
+        state = head_dir + forward_state
         
         # Vision.
         dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
@@ -82,17 +90,11 @@ class Snake:
             dis = 1.0
             see_food = 0.0
             see_self = 0.0
-            see_other = 0.0
-            dis_to_food = np.inf
-            dis_to_self = np.inf
-            dis_to_other = np.inf
             while x >= 0 and x < self.board_x and y >= 0 and y < self.board_y:
                 if (x, y) == food:
                     see_food = 1.0  
-                    dis_to_food = dis
                 elif (x, y) in self.body:
                     see_self = 1.0 
-                    dis_to_self = dis
                 dis += 1
                 x += dir[0]
                 y += dir[1]
@@ -119,15 +121,23 @@ class Game:
         rand: Random function.
     """
 
-    def __init__(self, show=False, rows=ROWS, cols=COLS):
+    def __init__(self, genes_list, seed=None, show=False, rows=ROWS, cols=COLS):
         self.Y = rows
         self.X = cols
         self.show = show
-        self.snakes = []
-        self.food = None
-        self.best_score = 0
-        self.seed = random.randint(-1000000000, 1000000000)
+        self.seed = seed if seed is not None else random.randint(-INF, INF)
         self.rand = random.Random(self.seed)
+
+        # Create new snakes, both with 1 length.
+        self.snakes = []
+        board = [(x, y) for x in range(self.X) for y in range(self.Y)]
+        for genes in genes_list:
+            head = self.rand.choice(board)
+            direction = DIRECTIONS[self.rand.randint(0, 3)]
+            self.snakes.append(Snake(head, direction, genes, self.X, self.Y))
+        
+        self.food = self.rand.choice(board)
+        self.best_score = 0
 
         if show:
             pg.init()
@@ -139,26 +149,7 @@ class Game:
             self.clock = pg.time.Clock()
             self.font_name = pg.font.match_font(FONT_NAME)
 
-
-    # need to deleted.
-    def new(self, genes_list, seed):
-        if seed is not None:
-            self.seed = seed
-            self.rand = random.Random(self.seed)
-
-        # Create new snakes, both with 1 length.
-        self.snakes = []
-        self.best_score = 0
-        board = [(x, y) for x in range(self.X) for y in range(self.Y)]
-        for genes in genes_list:
-            head = self.rand.choice(board)
-            direction = DIRECTIONS[self.rand.randint(0, 3)]
-            self.snakes.append(Snake(head, direction, genes, self.X, self.Y))
-        
-        self.food = self.rand.choice(board)
-
-    def play(self, genes_list, seed=None):
-        self.new(genes_list, seed)
+    def play(self):
         board = [(x, y) for x in range(self.X) for y in range(self.Y)]
         #alive_snakes_set = set(self.rand.sample(self.snakes, len(self.snakes)))
         alive_snakes_set = set(self.snakes)
@@ -178,8 +169,11 @@ class Game:
             alive_snakes_set = set(alive_snakes)
 
 
-        score = [snake.score for snake in self.snakes]
-        steps = [snake.steps for snake in self.snakes]
+        if len(self.snakes) > 1:
+            score = [snake.score for snake in self.snakes]
+            steps = [snake.steps for snake in self.snakes]
+        else:
+            score, steps = self.snakes[0].score, self.snakes[0].steps
 
         return score, steps, self.seed
 

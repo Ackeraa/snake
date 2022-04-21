@@ -16,7 +16,7 @@ class Net(nn.Module):
         relu: Activation function of fc1 and fc2.
         sigmoid: Activation function of output.
     """    
-    def __init__(self, n_input, n_hidden1, n_hidden2, n_output):
+    def __init__(self, n_input, n_hidden1, n_hidden2, n_output, weights):
         super(Net, self).__init__()
 
         self.a = n_input
@@ -30,6 +30,8 @@ class Net(nn.Module):
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
+        self.update_weights(weights)
+
     def forward(self, x):
         y = self.fc1(x)
         y = self.relu(y)
@@ -39,7 +41,7 @@ class Net(nn.Module):
         y = self.sigmoid(y)
         return y
 
-    def update(self, weights):
+    def update_weights(self, weights):
         """Update the weights of the Neural Network."""
         weights = torch.FloatTensor(weights)
         with torch.no_grad():
@@ -60,10 +62,6 @@ class Net(nn.Module):
         y = self(input)
         return torch.argmax(y, dim=1).tolist()[0]
 
-    def show(self):
-        with torch.no_grad():
-            for parameters in self.parameters():
-                print(parameters.numpy().flatten())
 
 if __name__ == '__main__':
     model = Net(32, 20, 12, 4)

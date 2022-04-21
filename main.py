@@ -1,10 +1,8 @@
 import random
 import argparse
 import numpy as np
-from nn import Net
-from ai_game import Game
+from ai_game2 import Game
 from settings import *
-import torch
 import os
 
 class Individual:
@@ -20,7 +18,6 @@ class Individual:
         self.genes = genes
         self.score = 0
         self.steps = 0
-        self.seed = None
     
     def get_fitness(self):
         """Get the fitness of Individual.
@@ -28,15 +25,9 @@ class Individual:
            game and use the Neural Network to play, finally use the reward function to
            calculate its fitness.
         """
-        score = self.score
-        steps = self.steps
-        self.fitness = (score+0.5*(steps-steps/(score+1))/(0.5+steps+steps/(score+1)))*100000
-        if score < 10:
-            self.fitness = score + 1 - 1 / steps
-            self.fitness = score / 100
-        else:
-            #self.fitness = score + 1 / steps
-            self.fitness = 0.4 * (score / 100) + 0.6 * (100 * score / ((100 * score - 1) * steps))
+        game = Game([self.genes])
+        self.score, self.steps, self.seed = game.play()
+        self.fitness = self.score + 1 / self.steps
 
 class GA:
     """Genetic Algorithm.
@@ -105,29 +96,13 @@ class GA:
         
         return selection
 
-    def compete(self, n=1):
-        game = Game()
-        for i in range(0, len(self.population), n):
-            competitors = [individual for individual in self.population[i : min(i + n, len(self.population))]]
-            genes_list = [individual.genes for individual in competitors]
-            score, steps, seed = game.play(genes_list)
-            for i in range(len(score)):
-                competitors[i].score = score[i]
-                competitors[i].steps = steps[i]
-                competitors[i].seed = seed
-
+    def evolve(self):
         sum_score = 0
         for individual in self.population:
             individual.get_fitness()
             sum_score += individual.score
         self.avg_score = sum_score / len(self.population)
 
-    def evolve(self):
-        # for individual in self.population:
-        #     self.compete0(individual)
-        # self.population = self.elitism_selection(self.p_size + self.c_size)
-
-        self.compete(2)
         self.population = self.elitism_selection(self.p_size)  # Select parents to generate children.
         self.best_individual = self.population[0]
         random.shuffle(self.population)
@@ -159,7 +134,7 @@ class GA:
     def save_all(self):
         """Save the population."""
         for individual in self.population:
-            self.compete(individual)
+            individual.get_fitness()
         population = self.elitism_selection(self.p_size)
         for i in range(len(population)):
             pth = os.path.join("genes", "all", str(i))
@@ -182,23 +157,22 @@ if __name__ == '__main__':
         ga.generate_ancestor()
     else:
         ga.inherit_ancestor()
-    if args.show:
-        from ai_game_noui_any import Game
-        game = Game(show=True)
 
     generation = 0
     record = 0
     while True:
         generation += 1
         ga.evolve()
-        print("generation:", generation, ",record:", record, ",best score:", ga.best_individual.score, ",average score:", ga.avg_score)
+        print("generation:", generation, ", record:", record,
+              ", best score:", ga.best_individual.score, ", average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
             ga.save_best(ga.best_individual.score)
         if args.show:
-            nn = ga.best_individual.nn
+            genes = ga.best_individual.genes
             seed = ga.best_individual.seed
-            game.play([nn], seed)
+            game = Game(show=True, genes_list=[genes], seed=seed)
+            game.play()
     
         #Save the population every 20 generation.
         if generation % 20 == 0:
