@@ -2,15 +2,16 @@ import random
 import argparse
 import numpy as np
 from nn import Net
-from ai_game import Game
 from ai_game_noui import Game as Game_Noui 
+from ai_game_noui2 import Game as Game_Noui2 
+from ai_game_noui_any import Game as Game_Noui_Any
+from ai_game import Game
 from settings import *
 import torch
 import os
 
 class Individual:
     """Individual in population of Genetic Algorithm.
-
     Attributes:
         nn: Neural Network.
         genes: A list which can transform to weight of Neural Network.
@@ -19,33 +20,31 @@ class Individual:
         seed: The random seed of the game, saved for reproduction.
     """
     def __init__(self, genes):
-        self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT)
         self.genes = genes
+        self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT, genes.copy())
         self.score = 0
         self.steps = 0
         self.seed = None
+        self.competitor = None
     
     def get_fitness(self):
-        """Get the fitness of Individual
-
+        """Get the fitness of Individual.
            First transform the genes to the weight of Neural Network, then create a new
            game and use the Neural Network to play, finally use the reward function to
            calculate its fitness.
         """
-        self.nn.update(self.genes.copy())
-        game = Game_Noui()
-        game.play(self.nn)
-        steps = game.steps
-        score = game.score
-        self.score = score
-        self.steps = steps
-        self.seed = game.seed
+        score = self.score
+        steps = self.steps
+        self.fitness = (score+0.5*(steps-steps/(score+1))/(0.5+steps+steps/(score+1)))*100000
+        if score < 10:
+            self.fitness = score + 1 - 1 / steps
+            self.fitness = score / 100
+        else:
+            #self.fitness = score + 1 / steps
+            self.fitness = 0.4 * (score / 100) + 0.6 * (100 * score / ((100 * score - 1) * steps))
 
-        self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
- 
 class GA:
     """Genetic Algorithm.
-
     Attributes:
         p_size: Size of the parent generation.
         c_size: Size of the child generation.
@@ -115,12 +114,29 @@ class GA:
         
         return selection
 
-    def evolve(self):
+    def competen(self, n):
+        game = Game_Noui_Any()
+        for i in range(0, len(self.population), n):
+            competitors = [individual for individual in self.population[i : min(i + n, len(self.population))]]
+            nns = [individual.nn for individual in competitors]
+            score, steps, seed = game.play(nns)
+            for i in range(len(score)):
+                competitors[i].score = score[i]
+                competitors[i].steps = steps[i]
+                competitors[i].seed = seed
+
         sum_score = 0
         for individual in self.population:
             individual.get_fitness()
             sum_score += individual.score
         self.avg_score = sum_score / len(self.population)
+
+    def evolve(self):
+        # for individual in self.population:
+        #     self.compete0(individual)
+        # self.population = self.elitism_selection(self.p_size + self.c_size)
+
+        self.competen(2)
         self.population = self.elitism_selection(self.p_size)  # Select parents to generate children.
         self.best_individual = self.population[0]
         random.shuffle(self.population)
@@ -141,19 +157,19 @@ class GA:
 
     def save_best(self, score):
         """Save the best individual that can get #score score so far."""
-        model_pth= os.path.join("model", "best_individual", "nn_"+str(score)+".pth")
+        model_pth= os.path.join("model0", "best_individual", "nn_"+str(score)+".pth")
         torch.save(self.best_individual.nn, model_pth)
-        seed_pth = os.path.join("seed", "seed_"+str(score)+".txt")
+        seed_pth = os.path.join("seed0", "seed_"+str(score)+".txt")
         with open(seed_pth, "w") as f:
             f.write(str(self.best_individual.seed)) 
     
     def save_all(self):
         """Save the population."""
         for individual in self.population:
-            individual.get_fitness()
+            self.compete0(individual)
         population = self.elitism_selection(self.p_size)
         for i in range(len(population)):
-            pth = os.path.join("model", "all_individual", str(i)+"_nn.pth")
+            pth = os.path.join("model0", "all_individual", str(i)+"_nn.pth")
             torch.save(population[i].nn, pth)
 
 if __name__ == '__main__':
@@ -162,7 +178,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--choice', default='generate', 
                          help=" 'generate' to generate new ancestor, 'inherit' to load from path ./all_individual.")
 
-    parser.add_argument('-s', '--show', default=True, type=bool, help='If show the best individual to  play snake after each envolve.')
+    parser.add_argument('-s', '--show', action="store_true", help='If show the best individual to  play snake after each envolve.')
     args = parser.parse_args()
 
     ga = GA()
@@ -172,7 +188,8 @@ if __name__ == '__main__':
     else:
         ga.inherit_ancestor()
     if args.show:
-        game = Game()
+        from ai_game_noui_any import Game
+        game = Game(show=True)
 
     generation = 0
     record = 0
@@ -183,11 +200,11 @@ if __name__ == '__main__':
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
             ga.save_best(ga.best_individual.score)
-            if args.show:
-                game.play(ga.best_individual.nn, ga.best_individual.seed)
-        
-        # Save the population every 20 generation.
+        if args.show:
+            nn = ga.best_individual.nn
+            seed = ga.best_individual.seed
+            game.play([nn], seed)
+    
+        #Save the population every 20 generation.
         if generation % 20 == 0:
             ga.save_all()
-
-
