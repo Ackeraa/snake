@@ -10,7 +10,8 @@ class Main(MovingCameraScene):
         self.add_code_pic()
         #self.add_snake()
         #self.add_nn()
-        self.add_main()
+        #self.add_main()
+        self.add_ai_game()
 
         self.wait()
 
@@ -276,7 +277,7 @@ class Main(MovingCameraScene):
 
         #self.add(self.codes, self.codes_desc)
     
-    def add_snake(self):
+    def add_ai_game(self):
     
         title = MathTex("snake.py", font_size=28).set_color([BLUE_E, TEAL_D]).shift(UP*3.5)
         anims = []
@@ -605,6 +606,7 @@ class Main(MovingCameraScene):
         code.code[5:17] = code5[5:17]   # 5 need to change to 7
         self.play(FadeIn(code.code[5:17], shift=UP)) # 5 need to change to 7
         
+        '''
         arr.move(7, False) 
         self.play(FadeIn(arr))
         n = 5
@@ -624,6 +626,7 @@ class Main(MovingCameraScene):
         ar1.next_to(p2[2], UP*0.1).shift(p2[2].width / 2 * RIGHT)
         self.play(FadeIn(VGroup(ar, ar1), shift=DOWN))
 
+        self.play(arr.move(9))
         pos1 = p1[3].get_center()
         pos2 = p2[3].get_center()
         path1 = ArcBetweenPoints(pos1, pos2, angle=-PI/2)
@@ -631,26 +634,146 @@ class Main(MovingCameraScene):
         self.play(MoveAlongPath(p1[-3:], path1),
                   MoveAlongPath(p2[-3:], path2), run_time=1)
 
-        self.play(arr.move(11))
+        self.play(FadeOut(VGroup(ar, ar1)), arr.move(11))
+        ## mutation
+        self.play(arr.move(12))
+        self.wait(2)
+        mutation_array1 = Array(5, [0, 0, 1, 0, 0], size=0.4, stroke_width=2)
+        mutation_array2 = Array(5, [0, 1, 0, 0, 0], size=0.4, stroke_width=2)
+        mu_vg = VGroup(mutation_array1, mutation_array2).arrange(RIGHT, buff=0.5)
+        mu_vg.shift(RIGHT*4+UP)
+        m1 = np.round(np.random.normal(size=5), 3)
+        m2 = np.round(np.random.normal(size=5), 3)
+        mutation1 = Array(5, list(m1), size=0.4, stroke_width=2) 
+        mutation2 = Array(5, list(m2), size=0.4, stroke_width=2) 
+        muu_vg = VGroup(mutation1, mutation2).arrange(RIGHT, buff=0.5)
+        muu_vg.shift(RIGHT*4+UP*2)
 
+        self.play(FadeIn(mu_vg, shift=DOWN))
+        self.play(arr.move(13))
+        self.wait(0.5)
+        self.play(FadeIn(muu_vg, shift=DOWN))
+        self.play(arr.move(14))
+        self.wait(0.5)
+        self.play(Indicate(mu_vg[0][2], color=WHITE),
+                  Indicate(muu_vg[0][2], color=WHITE),
+                  Indicate(mu_vg[1][1], color=WHITE),
+                  Indicate(muu_vg[1][1], color=WHITE),
+                  )
+        self.wait(0.5)
+        self.play(mutation1[2].animate.update_text(str(round(m1[2]*0.2, 3)), size=0.2),
+                    mutation2[1].animate.update_text(str(round(m1[1]*0.2, 3)), size=0.2))
 
+        self.play(arr.move(15))
+        self.wait(0.5)
+        self.play(Indicate(mu_vg[0][2], color=WHITE),
+                  Indicate(muu_vg[0][2], color=WHITE),
+                  Indicate(p2[2], color=WHITE),
+                  Indicate(mu_vg[1][1], color=WHITE),
+                  Indicate(muu_vg[1][1], color=WHITE),
+                  Indicate(p2[1], color=WHITE))
+        self.wait(0.5)
+        self.play(p2[2].animate.update_text(str(round(m1[2]*0.2+float(p2[2][1].text), 3)), size=0.2),
+                    p2[1].animate.update_text(str(round(m1[1]*0.2+float(p2[1][1].text), 3)), size=0.2))
+        '''
 
+        ## select
+        self.play(FadeOut(code.code[7:17], shift=DOWN)) #
+        code6 = MyCode("main_6.py").code.shift(LEFT * 3)
+        code.code[7:25] = code6[7:25]   
+        self.play(FadeIn(code.code[7:25], shift=UP))
+        '''
+        self.wait(0.5)
+        self.play(Indicate(code.code[8:11], color=TEAL_D))
+        self.info_update("精英选择: 对种群按适应度大小排序，返回前 #size 个", pos=RIGHT*4, font_size=13)
+        self.wait(1.5)
+        arr.move(12, False)
+        self.play(FadeIn(arr))
+        self.info_update("轮盘赌选择: 适应度越大被选概率越大", pos=RIGHT*4, font_size=13)
+        self.wait(1.5)
+        self.play(Indicate(code.code[13:25], color=TEAL_D))
+        self.info_update("")
 
-class Test(ThreeDScene):
+        n = 10
+        angles = [0.05, 0.01, 0.02, 0.4, 0.05, 0.07, 0.01, 0.2, 0.1, 0.09]
+
+        wheel = VGroup()
+        lines = VGroup()
+        secs = VGroup()
+        angle = 1
+        line = Line(ORIGIN, RIGHT*2, stroke_width=1, color=GREY_C)
+        for i in range(10):
+            sec = AnnularSector(outer_radius=2, inner_radius=0, angle=2*PI*angle)
+            sec.set_color(COLORS[i])
+            secs.add(sec)
+            line = line.copy().rotate(-2*PI*angles[i], about_point=RIGHT-RIGHT)
+            lines.add(line)
+            angle -= angles[i]
+        dot = Dot(color=WHITE)
+        circle = Circle(2, color=GREY_C, stroke_width=2)
+        arrow = Arrow(buff=0, start=ORIGIN, end=RIGHT*1.5, stroke_width=3,
+                      color=GREY_E, max_tip_length_to_length_ratio=0.1)
+        wheel.add(secs, lines, circle, arrow, dot)
+        wheel.shift(RIGHT*3)
+        self.play(FadeIn(secs, scale=0.5), FadeIn(lines, scale=0.5), FadeIn(circle, scale=0.5))
+        self.play(Create(dot), Create(arrow))
+
+        self.play(Rotate(arrow, angle=8*PI+0.75*PI, about_point=dot.get_center(),
+                         rate_func=rush_from), run_time=3)
+
+        self.play(FadeOut(wheel))
+        '''
+
+        ## envole
+        self.play(FadeOut(code.code[7:25], shift=DOWN)) #
+        code7 = MyCode("main_7.py").code.shift(LEFT * 3)
+        code.code[7:26] = code7[7:26]   
+        self.play(FadeIn(code.code[7:26], shift=UP))
+        self.wait(0.5)
+        arr.move(7, False)
+        self.play(FadeIn(arr))
+        self.info_update("进化", pos=RIGHT*4, font_size=13)
+        self.play(FadeOut(arr))
+        self.wait(1)
+        self.play(Indicate(code.code[8:13], color=TEAL_D))
+        self.info_update("计算个体适应度，并选取适应度高的个体作为父代", pos=RIGHT*4, font_size=13)
+        self.wait(3)
+        self.play(Indicate(code.code[15:23], color=TEAL_D))
+        self.info_update("每次轮盘赌选择两个父代个体，并交叉、变异生成两个子代个体", pos=RIGHT*4, font_size=13)
+        self.wait(3)
+
+class Test(Scene):
     def construct(self):
-        n = 5
-        p1 = Array(n, [round(random.random(), 3) for _ in range(n)],
-                   size=0.4, stroke_width=2)
-        p2 = Array(n, [round(random.random(), 3) for _ in range(n)],
-                   size=0.4, stroke_width=2)
-        vg = VGroup(p1, p2).arrange(RIGHT, buff=0.5)
-        vg.shift(RIGHT*4)
-        self.add(vg)
-        pos1 = p1[3].get_center()
-        pos2 = p2[3].get_center()
-        path1 = ArcBetweenPoints(pos1, pos2, angle=-PI/2)
-        path2 = ArcBetweenPoints(pos2, pos1, angle=-PI/2)
-        self.play(MoveAlongPath(p1[-3:], path1),
-                  MoveAlongPath(p2[-3:], path2), run_time=1)
+        n = 10
+        angles = [0.05, 0.01, 0.02, 0.4, 0.05, 0.07, 0.01, 0.2, 0.1, 0.09]
 
+        wheel = VGroup()
+        lines = VGroup()
+        secs = VGroup()
+        angle = 1
+        line = Line(ORIGIN, RIGHT*2, stroke_width=1, color=GREY_C)
+        for i in range(10):
+            sec = AnnularSector(outer_radius=2, inner_radius=0, angle=2*PI*angle)
+            sec.set_color(COLORS[i])
+            secs.add(sec)
+            line = line.copy().rotate(-2*PI*angles[i], about_point=RIGHT-RIGHT)
+            lines.add(line)
+            angle -= angles[i]
+        dot = Dot(color=WHITE)
+        circle = Circle(2, color=GREY_C, stroke_width=2)
+        arrow = Arrow(buff=0, start=ORIGIN, end=RIGHT*1.5, stroke_width=3,
+                      color=GREY_E, max_tip_length_to_length_ratio=0.1)
+        wheel.add(secs, lines, circle, arrow, dot)
+        wheel.shift(RIGHT*3)
+        self.play(FadeIn(secs), FadeIn(lines), FadeIn(circle))
+        self.play(Create(dot), Create(arrow))
+
+        self.play(Rotate(arrow, angle=8*PI+0.75*PI, about_point=dot.get_center(),
+                         rate_func=rush_from), run_time=3)
+        self.wait()
+
+        '''
+        for sec in secs:
+            self.play(Create(sec), run_time=0.4)
+        '''
 

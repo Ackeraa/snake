@@ -6,7 +6,8 @@ from settings import *
 class GA:
     
     def elitism_selection(self, size):
-        population = sorted(self.population, key =lambda individual: individual.fitness, reverse=True)
+        population = sorted(self.population,
+            key = lambda individual: individual.fitness, reverse=True)
         return population[:size]
 
     def roulette_wheel_selection(self, size):
@@ -22,7 +23,6 @@ class GA:
                     break
         
         return selection
-
 
 
 

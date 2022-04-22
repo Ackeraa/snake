@@ -3,6 +3,7 @@ import math
 from queue import Queue
 import random
 
+COLORS = ['#FF8080', '#00FF00', '#A6CF8C', '#699C52', '#58C4DD', '#F0AC5F', '#E8C11C', '#B189C6', '#FF0000', '#C55F73']
 def random_color1(visible):
     if not visible:
         return BLACK
