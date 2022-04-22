@@ -599,34 +599,58 @@ class Main(MovingCameraScene):
         self.wait(2)
         '''
 
+        ## crossover
         self.play(FadeOut(code.code[5:37], shift=DOWN)) #
         code5 = MyCode("main_5.py").code.shift(LEFT * 3)
-        code.code[5:21] = code5[5:21]   # 5 need to change to 7
-        self.play(FadeIn(code.code[5:21], shift=UP)) # 5 need to change to 7
+        code.code[5:17] = code5[5:17]   # 5 need to change to 7
+        self.play(FadeIn(code.code[5:17], shift=UP)) # 5 need to change to 7
+        
+        arr.move(7, False) 
+        self.play(FadeIn(arr))
+        n = 5
+        p1 = Array(n, [round(random.random(), 3) for _ in range(n)],
+                   size=0.4, stroke_width=2)
+        p2 = Array(n, [round(random.random(), 3) for _ in range(n)],
+                   size=0.4, stroke_width=2)
+        vg_genes = VGroup(p1, p2).arrange(RIGHT, buff=0.5)
+        vg_genes.shift(RIGHT*4)
+        self.play(FadeIn(vg_genes))
+
+        self.play(arr.move(8))
+        ar = Arrow(start=UP*0.2, end=DOWN*0.1, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.3)
+        ar1 = ar.copy()
+        ar.next_to(p1[2], UP*0.1).shift(p1[2].width / 2 * RIGHT)
+        ar1.next_to(p2[2], UP*0.1).shift(p2[2].width / 2 * RIGHT)
+        self.play(FadeIn(VGroup(ar, ar1), shift=DOWN))
+
+        pos1 = p1[3].get_center()
+        pos2 = p2[3].get_center()
+        path1 = ArcBetweenPoints(pos1, pos2, angle=-PI/2)
+        path2 = ArcBetweenPoints(pos2, pos1, angle=-PI/2)
+        self.play(MoveAlongPath(p1[-3:], path1),
+                  MoveAlongPath(p2[-3:], path2), run_time=1)
+
+        self.play(arr.move(11))
 
 
 
 
 class Test(ThreeDScene):
     def construct(self):
-        resolution_fa = 42
-        self.set_camera_orientation(theta=-70 * DEGREES, phi=75 * DEGREES)
+        n = 5
+        p1 = Array(n, [round(random.random(), 3) for _ in range(n)],
+                   size=0.4, stroke_width=2)
+        p2 = Array(n, [round(random.random(), 3) for _ in range(n)],
+                   size=0.4, stroke_width=2)
+        vg = VGroup(p1, p2).arrange(RIGHT, buff=0.5)
+        vg.shift(RIGHT*4)
+        self.add(vg)
+        pos1 = p1[3].get_center()
+        pos2 = p2[3].get_center()
+        path1 = ArcBetweenPoints(pos1, pos2, angle=-PI/2)
+        path2 = ArcBetweenPoints(pos2, pos1, angle=-PI/2)
+        self.play(MoveAlongPath(p1[-3:], path1),
+                  MoveAlongPath(p2[-3:], path2), run_time=1)
 
-        axes = ThreeDAxes(x_range=(1, 100), y_range=(0, 100), z_range=(0, 1)).scale(0.4)
 
-
-        surface = Surface(
-            lambda u, v: axes.c2p(*self.func(u, v)),
-            resolution=(resolution_fa, resolution_fa),
-            u_range=[1, 10],
-            v_range=[1, 10]
-        )
-        labels = axes.get_axis_labels(x_label='x')
-
-        self.add(axes, surface, labels)
-
-    def func(self, u, v):
-        x = u
-        y = v
-        z = x / y + 0.2 * math.sqrt(math.log(10000)/y)
-        return np.array([x, y, z])
