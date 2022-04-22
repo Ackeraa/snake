@@ -6,21 +6,18 @@ import math
 class Main(MovingCameraScene):
     def construct(self):
         self.info = Info("")
-        #self.add_flow()
-        self.add_code_pic()
-        #self.add_snake()
+        self.add_flow()
+        #self.add_code_pic()
         #self.add_nn()
         #self.add_main()
-        self.add_ai_game()
-
-        self.wait()
+        #self.add_ai_game()
 
     def info_update(self, text, pos=None, font_size=20):
         self.play(self.info.animate.update_text(text, pos, font_size))
 
     def add_flow(self):
 
-        #self.info_update("生成种群")
+        self.info_update("生成种群")
         n = 25
         m = int(math.sqrt(n))
         population = VGroup()
@@ -31,13 +28,12 @@ class Main(MovingCameraScene):
                 population.add(Individual(happy=random.random()>0.5).scale(0.2))
 
         population.arrange_in_grid(rows=m).shift(UP*0.5)
-        #self.play(FadeIn(population))
+        self.play(FadeIn(population))
         self.add(population)
 
         # Individual.
-        #self.info_update("")
-        #self.play(population.animate.shift(LEFT*5.5).scale(0.5))
-        population.shift(LEFT*5.5).scale(0.5)
+        self.info_update("")
+        self.play(population.animate.shift(LEFT*5.5).scale(0.5))
 
         arr1 = Arrow(start=LEFT+UP, end=RIGHT, stroke_width=2,
                      max_tip_length_to_length_ratio=0.05, color=BLUE)
@@ -61,7 +57,7 @@ class Main(MovingCameraScene):
         for i in range(m):
             arr.add(Arrow(start=dot, end=individuals[i], stroke_width=1.5,
                           max_tip_length_to_length_ratio=0.05, color=GRAY_B))
-        #self.play(FadeIn(arr), FadeIn(individuals))
+        self.play(FadeIn(arr), FadeIn(individuals))
         self.add(arr, individuals)
 
         # Genes.
@@ -72,10 +68,9 @@ class Main(MovingCameraScene):
                 genes.add(Ellipsi(color=BLACK).scale(0.5))
             else:
                 genes.add(Genes(5).scale(0.3))
-                #anims.append(ReplacementTransform(individuals[i][2].copy(), genes[i]))
+                anims.append(ReplacementTransform(individuals[i][2].copy(), genes[i]))
         genes.arrange(DOWN, buff=0.6).shift(LEFT*2)
-        #self.play(*anims)
-        self.add(genes)
+        self.play(*anims)
 
         # NN.
         nns = VGroup()
@@ -85,9 +80,9 @@ class Main(MovingCameraScene):
                 nns.add(Ellipsi().scale(0.5))
             else:
                 nns.add(NN().scale(0.25))
-            #anims.append(ReplacementTransform(genes[i].copy(), nns[i]))
+            anims.append(ReplacementTransform(genes[i].copy(), nns[i]))
         nns.arrange(DOWN, buff=0.6)
-        #self.play(*anims)
+        self.play(*anims)
 
         arr1 = VGroup()
         for i in range(m):
@@ -95,8 +90,7 @@ class Main(MovingCameraScene):
             dot2 = Dot().move_to(nns[i]).shift(LEFT*0.3)
             arr1.add(Arrow(start=dot1, end=dot2, stroke_width=1.5,
                           max_tip_length_to_length_ratio=0.05, color=GRAY_B))
-        self.add(arr1)
-        self.add(nns)
+        self.play(FadeIn(arr1))
 
         # Game.
         games = VGroup()
@@ -126,15 +120,15 @@ class Main(MovingCameraScene):
                                  stroke_width=1.5, color=GRAY_B).scale(0.25).shift(DOWN*0.5)
 
                 arr2.add(ar, ar1)
-        self.add(arr2)
-        self.add(games)
+        self.play(FadeIn(games))
+        self.play(FadeIn(arr2))
 
         # Simulate.
         rects = VGroup()
         for i in range(m):
             if i != m // 2:
                 rects.add(Rectangle(stroke_width=1.5, color=BLUE_C).surround(VGroup(nns[i], games[i])))
-        self.add(rects)
+        self.play(FadeIn(rects))
 
         # Show passing flash.
         anims = []
@@ -153,11 +147,9 @@ class Main(MovingCameraScene):
             anims2.append(ShowPassingFlash(e2.copy().set_color(color),
                                           run_time=run_time,
                                           time_width=run_time))
-        '''
         for _ in range(5):
             self.play(*anims)
             self.play(*anims2)
-        '''
         
         # Fitness.
         fits = VGroup()
@@ -167,12 +159,12 @@ class Main(MovingCameraScene):
             else:
                 fits.add(MathTex("f(score, steps)").scale(0.4).next_to(games[i], RIGHT))
         
-        self.add(fits)
+        self.play(FadeIn(fits))
 
         # Envolve.
 
-        #self.play(ReplacementTransform(fits, population))
-        #self.play(FadeOut(*self.mobjects[1:]), population.animate.shift(RIGHT*3).scale(2))
+        self.play(ReplacementTransform(fits, population))
+        self.play(FadeOut(*self.mobjects[1:]), population.animate.shift(RIGHT*3).scale(2))
         saved_mobjects = self.mobjects[1:].copy()
         self.remove(*self.mobjects[1:])
         population.shift(RIGHT*3).scale(2)
@@ -221,8 +213,6 @@ class Main(MovingCameraScene):
                 vc2.add(children[i][x])
             anims.append(ReplacementTransform(vp2.copy(), vc2))
 
-        self.add(children) #to be deleted.
-
         # Mutate.
         indics = [1, 7, 8, 13]
         anims = []
@@ -252,8 +242,9 @@ class Main(MovingCameraScene):
         # Next generation.
         population.shift(LEFT*3).scale(0.5)
         self.add(*saved_mobjects)
-
-        self.remove(*self.m_objects)
+        self.info_update("进行下一轮")
+        self.wait()
+        self.remove(*self.mobjects)
 
     def add_code_pic(self):
 
@@ -279,14 +270,128 @@ class Main(MovingCameraScene):
     
     def add_ai_game(self):
     
-        title = MathTex("snake.py", font_size=28).set_color([BLUE_E, TEAL_D]).shift(UP*3.5)
+        '''
+        title = MathTex("ai\_game.py", font_size=28).set_color([BLUE_E, TEAL_D]).shift(UP*3.5)
         anims = []
-        anims.append(self.codes[0].animate.shift(LEFT*0.2+UP).scale(1.1))
+        code = MyCode("ai_game_2.py").shift(LEFT * 3)
+        anims.append(ReplacementTransform(self.codes[0], code))
         anims.append(ReplacementTransform(self.codes_title[0], title))
         anims.append(FadeOut(self.codes[1:]))
         anims.append(FadeOut(self.codes_title[1:]))
         anims.append(FadeOut(self.codes_desc))
         self.play(*anims)
+        '''
+        code = MyCode("ai_game_2.py").shift(LEFT * 3) #
+        self.add(code) #
+
+        anims = []
+        lines = [8, 11, 14, 19, 22]
+        infos = ["初始化蛇", "蛇进行移动", "获取当前状态(作为神经网络输入)",
+                 "初始化游戏(可含有多条蛇)", "进行一轮游戏"]
+        arr = CodeArr(code, lines[0])
+        '''
+        self.play(FadeIn(arr))
+        self.info_update(infos[0])
+        for i in range(1, len(lines)):
+            self.play(arr.move(lines[i]))
+            self.info_update(infos[i], pos=RIGHT*4, font_size=13)
+            self.wait(1.5)
+        '''
+        # snake
+        ## __init__
+        code3 = MyCode("ai_game_3.py").code.shift(LEFT * 3)
+        self.play(FadeOut(code.code[8:], shift=DOWN))
+        code.code[8:] = code3[8:]
+        self.play(FadeIn(code.code[8:], shift=UP))
+        self.play(Indicate(code.code[9:16], color=TEAL_D))
+        '''
+        self.info_update("初始化蛇的位置、方向、得分等", pos=RIGHT*4, font_size=13)
+        self.wait(1.5)
+        self.play(Indicate(code.code[16], color=TEAL_D))
+        self.info_update("用于判断蛇是否进入死循环", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        self.play(Indicate(code.code[17], color=TEAL_D))
+        self.info_update("根据基因初始化神经网络", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        self.info_update("")
+        '''
+        
+        ## get_state
+        code4 = MyCode("ai_game_4.py").code.shift(LEFT * 3)
+        self.play(FadeOut(code.code[8:], shift=DOWN))
+        code.code[8:] = code4[8:]
+        self.play(FadeIn(code.code[8:14], shift=UP))
+        '''
+        self.play(Indicate(code.code[9:12], color=TEAL_D))
+        self.info_update("蛇头方向", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        self.play(Create(code.code[15:35]), run_time=8)
+        self.info_update("蛇头8个方向上是否有食物、自身、墙", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        '''
+
+        ## move
+        code5 = MyCode("ai_game_5.py").code.shift(LEFT * 3)
+        self.play(FadeOut(code.code[8:], shift=DOWN))
+        code.code[8:] = code5[8:]
+        self.play(FadeIn(code.code[8:], shift=UP))
+        arr.move(8, False)
+        self.play(FadeIn(arr))
+        indics = [10, 11, 14, 18, 22, 23, 27, 28, 34]
+        infos = ["获取当前状态", "将状态输入神经网络，预测下一步移动方向", "蛇头下一步的位置",
+                 "判断是否撞墙或撞自己", "没有撞墙，插入新的蛇头",  "是否吃到食物",
+                 "舍去旧的蛇尾", "判断是否出现死循环", "返回是否吃到了食物"]
+        '''
+        for i in range(len(indics)):
+            self.play(arr.move(indics[i]))
+            self.info_update(infos[i], pos=RIGHT*4, font_size=13)
+            self.wait(2)
+        '''
+
+        # game
+        ## __init__
+        code6 = MyCode("ai_game_6.py").code.shift(LEFT * 3)
+        self.play(FadeOut(code.code[6:], shift=DOWN))
+        code.code[6:] = code6[6:]
+        self.play(FadeIn(code.code[6:], shift=UP))
+        '''
+        self.play(Indicate(code.code[9:11], color=TEAL_D))
+        self.info_update("初始化界面大小", pos=RIGHT*4, font_size=13)
+        self.wait(1)
+        self.play(Indicate(code.code[11:13], color=TEAL_D))
+        self.info_update("初始化随机函数(用于训练过程的复现)", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        self.play(Indicate(code.code[14:20], color=TEAL_D))
+        self.info_update("根据基因列表生成若干条蛇", pos=RIGHT*4, font_size=13)
+        self.wait(2)
+        self.play(Indicate(code.code[21], color=TEAL_D))
+        self.info_update("生成初始食物", pos=RIGHT*4, font_size=13)
+        self.wait(1)
+        '''
+
+        ## play
+        code7 = MyCode("ai_game_7.py").code.shift(LEFT * 3)
+        self.play(FadeOut(code.code[8:], shift=DOWN))
+        code.code[8:] = code7[8:]
+        self.play(FadeIn(code.code[8:], shift=UP))
+        arr.move(11, False)
+        self.play(FadeIn(arr))
+        self.info_update("当还有蛇存活时", pos=RIGHT*4, font_size=13)
+        self.wait()
+        self.play(arr.move(13))
+        self.info_update("每条蛇依次移动", pos=RIGHT*4, font_size=13)
+        self.wait()
+        self.play(arr.move(15))
+        self.info_update("如果食物被吃掉，生成新食物", pos=RIGHT*4, font_size=13)
+        self.wait(1.5)
+        self.play(arr.move(16))
+        self.info_update("舍弃死亡的蛇", pos=RIGHT*4, font_size=13)
+        self.wait(1.5)
+        self.play(arr.move(23))
+        self.info_update("返回得分、步数及随机数种子", pos=RIGHT*4, font_size=13)
+        self.wait(1.5)
+
+
     
     def add_nn(self):
 
