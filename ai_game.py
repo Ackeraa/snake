@@ -58,7 +58,6 @@ class Snake:
         head_dir = [0.0, 0.0, 0.0, 0.0]
         head_dir[i] = 1.0
 
-        '''
         # Tail direction.
         if len(self.body) == 1:
             tail_direction = self.direction
@@ -77,8 +76,9 @@ class Snake:
             forward_state[1] = 1.0
         if forward == self.body[-1]:
             forward_state[2] = 1.0
+        '''
 
-        state = head_dir + forward_state
+        state = head_dir + tail_dir
         
         # Vision.
         dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
@@ -242,6 +242,21 @@ class Game:
                 pg.quit()
                 quit()
 
+def play_saved_model(score):
+    """Use the saved Neural Network model play the game.
+    Args:
+        score: Specify which model to load, also indicates the highest score it can get.
+    """
+    genes_pth = os.path.join("genes", "best", str(score))
+    with open(genes_pth, "r") as f:
+        genes = np.array(list(map(float, f.read().split())))
+
+    seed_pth = os.path.join("seed", str(score))  # Get the seed for reproduction.
+    with open(seed_pth, "r") as f:
+        seed = int(f.read())
+
+    game = Game(show=True, genes_list=[genes], seed=seed)
+    game.play()
+
 if __name__ == '__main__':
-    game = Game(show=True)
-    game.play_saved_model(50)
+    play_saved_model(75)
