@@ -8,26 +8,27 @@ import os
 class Individual:
     """Individual in population of Genetic Algorithm.
     Attributes:
-        nn: Neural Network.
         genes: A list which can transform to weight of Neural Network.
         score: Score of the snake played by its Neural Network.
         steps: Steps of the snake played by its Neural Network.
+        fitnees: Fitness of Individual.
         seed: The random seed of the game, saved for reproduction.
     """
     def __init__(self, genes):
         self.genes = genes
         self.score = 0
         self.steps = 0
+        self.fitness = 0
+        self.seed = None
     
     def get_fitness(self):
-        """Get the fitness of Individual.
-           First transform the genes to the weight of Neural Network, then create a new
-           game and use the Neural Network to play, finally use the reward function to
-           calculate its fitness.
-        """
+        """Get the fitness of Individual."""
         game = Game([self.genes])
         self.score, self.steps, self.seed = game.play()
         self.fitness = self.score + 1 / self.steps
+        score = self.score
+        steps = self.steps
+        self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
 
 class GA:
     """Genetic Algorithm.
@@ -55,20 +56,17 @@ class GA:
             self.population.append(Individual(genes))
     
     def inherit_ancestor(self):
-        """Load genes(nn model parameters) from file."""
+        """Load genes from file."""
         for i in range(self.p_size):
             pth = os.path.join("genes", "all", str(i))
-            genes = np.array(list(map(float, f.read().split())))
-            self.population.append(Individual(genes))
+            with open(pth, "r") as f:
+                genes = np.array(list(map(float, f.read().split())))
+                self.population.append(Individual(genes))
 
     def crossover(self, c1_genes, c2_genes):
         """Single point crossover."""
-        p1_genes = c1_genes.copy()
-        p2_genes = c2_genes.copy()
-
         point = np.random.randint(0, self.genes_len)
-        c1_genes[:point + 1] = p2_genes[:point + 1]
-        c2_genes[:point + 1] = p1_genes[:point + 1]
+        c1_genes[:point + 1], c2_genes[:point + 1] = c2_genes[:point + 1], c1_genes[:point + 1]
 
     def mutate(self, c_genes):  
         """Gaussian mutation with scale of 0.2."""
@@ -97,6 +95,7 @@ class GA:
         return selection
 
     def evolve(self):
+        '''The main procss of Genetic Algorithm.'''
         sum_score = 0
         for individual in self.population:
             individual.get_fitness()
@@ -121,26 +120,27 @@ class GA:
         random.shuffle(children)
         self.population.extend(children)
 
-    def save_best(self, score):
-        """Save the best individual that can get #score score so far."""
-        genes_pth= os.path.join("genes", "best", str(score))
-        with open(genes_pth, "w") as f:
-            for gene in self.best_individual.genes:
+def save_best(ga):
+    """Save the best individual that can get #score score so far."""
+    score = ga.best_individual.score
+    genes_pth= os.path.join("genes", "best", str(score))
+    with open(genes_pth, "w") as f:
+        for gene in ga.best_individual.genes:
+            f.write(str(gene) + " ") 
+    seed_pth = os.path.join("seed", str(score))
+    with open(seed_pth, "w") as f:
+        f.write(str(ga.best_individual.seed)) 
+
+def save_all(ga):
+    """Save the population."""
+    for individual in ga.population:
+        individual.get_fitness()
+    population = ga.elitism_selection(ga.p_size)
+    for i in range(len(population)):
+        pth = os.path.join("genes", "all", str(i))
+        with open(pth, "w") as f:
+            for gene in ga.population[i].genes:
                 f.write(str(gene) + " ") 
-        seed_pth = os.path.join("seed", str(score))
-        with open(seed_pth, "w") as f:
-            f.write(str(self.best_individual.seed)) 
-    
-    def save_all(self):
-        """Save the population."""
-        for individual in self.population:
-            individual.get_fitness()
-        population = self.elitism_selection(self.p_size)
-        for i in range(len(population)):
-            pth = os.path.join("genes", "all", str(i))
-            with open(pth, "w") as f:
-                for gene in self.best_individual.genes:
-                    f.write(str(gene) + " ") 
 
 if __name__ == '__main__':
 
@@ -167,7 +167,7 @@ if __name__ == '__main__':
               ", best score:", ga.best_individual.score, ", average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
-            ga.save_best(ga.best_individual.score)
+            save_best(ga)
         if args.show:
             genes = ga.best_individual.genes
             seed = ga.best_individual.seed
@@ -176,4 +176,4 @@ if __name__ == '__main__':
     
         #Save the population every 20 generation.
         if generation % 20 == 0:
-            ga.save_all()
+            save_all(ga)

@@ -3,10 +3,21 @@ import random
 from settings import *
 import numpy as np
 from nn import Net
-import torch
 import os
 
 class Snake:
+    """Snake which can move and get state of the environment.
+    Attributes:
+        body: Positions of the snake's body.
+        direction: Direction of the snake's head.
+        score: Score of the snake played by its Neural Network.
+        steps: Steps of the snake played by its Neural Network.
+        dead: Whether the snake is dead.
+        uniq: Hash table to detect infinate loop.
+        board_x: X axis's length of the board.
+        board_y: Y axis's length of the board.
+        nn: Neural Network defined by the arg genes.
+    """
 
     def __init__(self, head, direction, genes, board_x, board_y):
         self.body = [head]
@@ -18,12 +29,13 @@ class Snake:
         self.board_x = board_x
         self.board_y = board_y
         self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT, genes.copy())
+        self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
     def move(self, food):
         """Take a direction to move.
         
         Args:
-            action: The the action of next move, 0: keeep straight, 1: turn left, 2: turn right.
+            food: Position of the food.
         """
         self.steps += 1
         state = self.get_state(food)
@@ -34,7 +46,7 @@ class Snake:
 
         has_eat = False
         if (head[0] < 0 or head[0] >= self.board_x or head[1] < 0 or head[1] >= self.board_y
-                or head in self.body[:-1]):  # Hit the wall or itself.
+                or head in self.body[:-1]):   # Hit the wall or itself.
             self.dead = True
         else:
             self.body.insert(0, head)
@@ -53,6 +65,11 @@ class Snake:
         return has_eat
 
     def get_state(self, food):
+        """Get the state of the surrounded environment, as input of the Neural Network.
+        
+        Args:
+            food: Position of the food.
+        """
         # Head direction.
         i = DIRECTIONS.index(self.direction)
         head_dir = [0.0, 0.0, 0.0, 0.0]
@@ -66,21 +83,9 @@ class Snake:
         i = DIRECTIONS.index(tail_direction)
         tail_dir = [0.0, 0.0, 0.0, 0.0]
         tail_dir[i] = 1.0
-        '''
-        forward = (self.body[0][0] + self.direction[0],
-                   self.body[0][1] + self.direction[1])
-        forward_state = [0.0, 0.0, 0.0]  # is_food, is_body, is_tail
-        if forward == food:
-            forward_state[0] = 1.0
-        if forward in self.body:
-            forward_state[1] = 1.0
-        if forward == self.body[-1]:
-            forward_state[2] = 1.0
-        '''
-
         state = head_dir + tail_dir
         
-        # Vision.
+        # Vision of 8 directions.
         dirs = [[0, -1], [1, -1], [1, 0], [1, 1], 
                 [0, 1], [-1, 1], [-1, 0], [-1, -1]]
         
@@ -103,22 +108,17 @@ class Snake:
         return state
 
 class Game:
-    """This Class is for visualization of the AI snake movement.
-       It gives the state of the game to Neural Network and gets the next move back.
+    """Let the snakes to move until dead.
+
     Attributes:
         X: Columns of the game board.
         Y: Rows of the game board.
-        score: Food eat by the snake.
-        steps: Steps moved of the snake.
-        snake: postion of the snake.
-        head: head of the snake.
-        food: Position of the food.
-        available_places: # Places available for snake to move or place food. 
-        game_over: A boolean if the game is over.
-        win: A boolean if the game is winning.
-        uniq: Hash table to detect infinate loop.
+        show: Whether to show the animation.
         seed: The random seed to generate food serials and initial position of snake.
         rand: Random function.
+        snakes: Snake lists.
+        food: Position of the food.
+        best: The highest score got by snakes.
     """
 
     def __init__(self, genes_list, seed=None, show=False, rows=ROWS, cols=COLS):
@@ -150,8 +150,8 @@ class Game:
             self.font_name = pg.font.match_font(FONT_NAME)
 
     def play(self):
+        """Play the game until all snakes dead."""
         board = [(x, y) for x in range(self.X) for y in range(self.Y)]
-        #alive_snakes_set = set(self.rand.sample(self.snakes, len(self.snakes)))
         alive_snakes_set = set(self.snakes)
         while alive_snakes_set:
             if self.show:
@@ -165,9 +165,7 @@ class Game:
                 if snake.score > self.best_score:
                     self.best_score = snake.score
             alive_snakes = [snake for snake in alive_snakes_set if not snake.dead]
-            #alive_snakes_set = set(self.rand.sample(alive_snakes, len(alive_snakes)))
             alive_snakes_set = set(alive_snakes)
-
 
         if len(self.snakes) > 1:
             score = [snake.score for snake in self.snakes]
@@ -177,21 +175,6 @@ class Game:
 
         return score, steps, self.seed
 
-    def play_saved_model(self, score):
-        """Use the saved Neural Network model play the game.
-        Args:
-            score: Specify which model to load, also indicates the highest score it can get.
-        """
-        genes_pth = os.path.join("genes", "best", str(score))
-        with open(genes_pth, "r") as f:
-            genes = np.array(list(map(float, f.read().split())))
-
-        seed_pth = os.path.join("seed", str(score))  # Get the seed for reproduction.
-        with open(seed_pth, "r") as f:
-            seed = int(f.read())
- 
-        self.play([genes], seed)
-
     def _draw(self):
         self.screen.fill(BLACK)
 
@@ -199,23 +182,25 @@ class Game:
         get_xy = lambda pos: (pos[0] * GRID_SIZE, pos[1] * GRID_SIZE + BLANK_SIZE)
         
         # Draw snake.
+        num = 0
         for snake in self.snakes:
             if not snake.dead:
+                num += 1
                 x, y = get_xy(snake.body[0])
                 pg.draw.rect(self.screen, WHITE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-                pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+                #pg.draw.rect(self.screen, WHITE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
                 for s in snake.body[1:]:
                     x, y = get_xy(s)
-                    pg.draw.rect(self.screen, BLUE1, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
-                    pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
+                    pg.draw.rect(self.screen, snake.color, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
+                    #pg.draw.rect(self.screen, BLUE2, pg.Rect(x+4, y+4, GRID_SIZE - 8, GRID_SIZE - 8))
 
         # Draw food.
         x, y = get_xy(self.food)
         pg.draw.rect(self.screen, RED, pg.Rect(x, y, GRID_SIZE, GRID_SIZE))
         
         # Draw text.
-        text = "best score: " + str(self.best_score)
+        text = "snakes: " + str(num) + " best score: " + str(self.best_score)
         font = pg.font.Font(self.font_name, 20)
         text_surface = font.render(text, True, WHITE)
         text_rect = text_surface.get_rect()
@@ -242,7 +227,7 @@ class Game:
                 pg.quit()
                 quit()
 
-def play_saved_model(score):
+def play_best(score):
     """Use the saved Neural Network model play the game.
     Args:
         score: Specify which model to load, also indicates the highest score it can get.
@@ -258,5 +243,21 @@ def play_saved_model(score):
     game = Game(show=True, genes_list=[genes], seed=seed)
     game.play()
 
+def play_all(n):
+    """Use the saved Neural Network model play the game.
+    Args:
+        score: Specify which model to load, also indicates the highest score it can get.
+    """
+    genes_list = []
+    for i in range(n):
+        genes_pth = os.path.join("genes", "all", str(i))
+        with open(genes_pth, "r") as f:
+            genes = np.array(list(map(float, f.read().split())))
+        genes_list.append(genes)
+
+    game = Game(show=True, genes_list=genes_list)
+    game.play()
+
 if __name__ == '__main__':
-    play_saved_model(75)
+    play_all(100)
+    #play_best(38)

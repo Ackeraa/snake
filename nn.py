@@ -42,7 +42,10 @@ class Net(nn.Module):
         return y
 
     def update_weights(self, weights):
-        """Update the weights of the Neural Network."""
+        """Update the weights of the Neural Network.
+        
+           weights is a list of size a*b+b + b*c+c + c*d+d.
+        """
         weights = torch.FloatTensor(weights)
         with torch.no_grad():
             x = self.a * self.b
@@ -64,10 +67,7 @@ class Net(nn.Module):
 
 
 if __name__ == '__main__':
-    model = Net(32, 20, 12, 4)
-
     weights = [random.random() for i in range(32 * 20 + 20 * 12 + 12 * 4 + 20 + 12 + 4)]
-    model.update(weights)
+    model = Net(32, 20, 12, 4, weights)
     input = [random.random() for _ in range(32)]
     print(model.predict(input))
-    model.show()
