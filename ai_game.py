@@ -153,15 +153,17 @@ class Game:
         """Play the game until all snakes dead."""
         #board = [(x, y) for x in range(self.X) for y in range(self.Y)]
         alive_snakes_set = set(self.snakes)
-        while alive_snakes_set:
+        while alive_snakes_set and self.food is not None:
             if self.show:
                 self._event()
                 self._draw()
 
             for snake in alive_snakes_set:
                 has_eat = snake.move(self.food)
-                if has_eat:
+                if has_eat: 
                     self.food = self.place_food()
+                    if self.food is None:
+                        break
                 if snake.score > self.best_score:
                     self.best_score = snake.score
             alive_snakes = [snake for snake in alive_snakes_set if not snake.dead]
@@ -181,7 +183,10 @@ class Game:
             if not snake.dead:
                 for body in snake.body:
                     board.discard(body)
-                
+
+        if len(board) == 0:
+            return None  
+
         return self.rand.choice(list(board))
 
     def _draw(self):
