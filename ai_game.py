@@ -25,7 +25,7 @@ class Snake:
         self.score = 0
         self.steps = 0
         self.dead = False
-        self.uniq = [0] * 100
+        self.uniq = [0] * board_x * board_y
         self.board_x = board_x
         self.board_y = board_y
         self.nn = Net(N_INPUT, N_HIDDEN1, N_HIDDEN2, N_OUTPUT, genes.copy())
@@ -274,4 +274,4 @@ def play_all(n):
 
 if __name__ == '__main__':
     play_all(100)
-    #play_best(38)
+    #play_best(292)

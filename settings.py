@@ -4,7 +4,7 @@ GRID_SIZE = 30
 BLANK_SIZE = 40
 ROWS = 20
 COLS = 20
-FPS = 40
+FPS = 80
 FONT_NAME = 'arial'
 
 
