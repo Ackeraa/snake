@@ -11,11 +11,11 @@ class Main(Scene):
     def construct(self):
         self.info = Info("")
         self.add_flow()
-        #self.add_code_pic()
-        #self.add_ai_game()
-        #self.add_nn()
-        #self.add_main()
-        #self.add_end()
+        self.add_code_pic()
+        self.add_ai_game()
+        self.add_nn()
+        self.add_main()
+        self.add_end()
 
     def add_end(self):
         t = Text("The End.", font_size=24)
@@ -201,7 +201,7 @@ class Main(Scene):
         # Envolve.
 
         self.play(Transform(fits, population), self.info_clear())
-        self.wait()
+        self.wait(0.4)
         self.play(FadeOut(*sm, fits), population.animate.shift(RIGHT*3).scale(2))
 
         n_die = 16
@@ -252,7 +252,7 @@ class Main(Scene):
             anims.append(ReplacementTransform(vp2.copy(), vc2))
         self.info_update("交叉", pos=RIGHT*5, font_size=16)
         for anim in anims:
-            self.play(anim, run_time=0.5)
+            self.play(anim, run_time=0.3)
 
         # Mutate.
         indics = [1, 7, 8, 13]
@@ -425,7 +425,7 @@ class Main(Scene):
         self.play(arr.move(23))
         self.info_update("返回得分、步数及随机数种子")
         self.wait(1.5)
-        self.play(FadeOut(*self.mobjects))
+        self.remove(*self.mobjects)
 
     def add_nn(self):
 
@@ -466,14 +466,16 @@ class Main(Scene):
 
         self.play(FadeOut(code.code[6:], shift=DOWN), FadeOut(arr),
                   self.info_clear())
-        code.code[34:] = code3.code[34:]
-        self.play(Create(code.code[34:]), run_time=3)
+        code.code[6:] = code3.code[6:]
+        self.play(Create(code.code[34:]), run_time=2)
+        self.play(FadeIn(code.code[6:21], shift=UP))
         w_bs = [0.2, 0.3, -0.3, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
         ws = [0.2, 0.3, 0.5, 0.1, 0.6, 0.2]
         bs = [-0.3, 0.5, 0.3, 0.1, 0.8] 
         weights = Array(11, w_bs, size=0.5, stroke_width=2).shift(RIGHT*4+UP*3)
-        self.play(code.animate.shift(LEFT*3), title.animate.shift(LEFT*3),
-                  code3.animate.shift(LEFT*3))
+        self.play(code.animate.shift(LEFT*3),
+                  code3.animate.shift(LEFT*3),
+                  title.animate.shift(LEFT*3))
         arr = CodeArr(code, 36)
         self.play(FadeIn(arr))
         self.play(ReplacementTransform(code.code[36].copy(), weights))
@@ -481,8 +483,6 @@ class Main(Scene):
         self.play(arr.move(37))
         self.wait()
         self.play(arr.move(5))
-        code.code[6:] = code3.code[6:]
-        self.play(FadeIn(code.code[6:21], shift=UP))
 
         # nn
         nn = VGroup()
@@ -580,7 +580,7 @@ class Main(Scene):
 
         ## set_weight
         self.play(arr.move(20))
-        self.play(FadeOut(code.code[6:21], shift=DOWN), FadeOut(arr))
+        self.play(FadeOut(code.code[5:21], shift=DOWN), FadeOut(arr))
         code4 = MyCode("nn_4.py").code.shift(LEFT * 3)
         code.code[5:19] = code4[5:19]
         self.play(FadeIn(code.code[5:19], shift=UP))
@@ -667,7 +667,6 @@ class Main(Scene):
         self.play(Indicate(nn[3][1], color=RED))
         self.wait()
         self.play(FadeOut(*self.mobjects))
-
 
     def add_main(self):
         # Introduce code structure.
@@ -840,11 +839,11 @@ class Main(Scene):
         self.play(FadeIn(secs, scale=0.5), FadeIn(lines, scale=0.5), FadeIn(circle, scale=0.5),
                   FadeOut(p1, p2, mu_vg, muu_vg))
         self.play(Create(dot), Create(arrow))
-        self.wait()
+        self.wait(0.3)
         self.play(Rotate(arrow, angle=8*PI+0.75*PI, about_point=dot.get_center(),
                          rate_func=rush_from), run_time=3)
 
-        self.play(FadeOut(wheel))
+        self.play(FadeOut(wheel), self.info_clear(), FadeOut(code.code[7:16]))
 
         ## envole
         code7 = MyCode("main_7.py").shift(LEFT*3)
@@ -854,15 +853,17 @@ class Main(Scene):
         arr = CodeArr(code, 7)
         self.play(FadeIn(arr))
         self.info = Info("")
-        self.info_update("进化", pos=LEFT*3)
+        self.info_update("进化", pos=LEFT*3+DOWN*3)
         self.play(FadeOut(arr))
         self.wait(1)
         self.play(Indicate(code.code[8:13], color=RED))
-        self.info_update("计算个体适应度，并选取适应度高的个体作为父代", pos=LEFT*3)
+        self.info_update("计算个体适应度，并选取适应度高的个体作为父代", pos=LEFT*3+DOWN*3)
         self.wait(2)
         self.play(Indicate(code.code[15:23], color=RED))
-        self.info_update("每次轮盘赌选择两个父代个体，并交叉、变异生成两个子代个体", pos=LEFT*3)
+        self.info_update("每次轮盘赌选择两个父代个体，并交叉、变异生成两个子代个体",
+                         pos=LEFT*3+DOWN*3)
         self.wait(2)
+        self.remove(*self.mobjects)
 
 class Test(Scene):
     def construct(self):
