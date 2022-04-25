@@ -136,7 +136,7 @@ class Game:
             direction = DIRECTIONS[self.rand.randint(0, 3)]
             self.snakes.append(Snake(head, direction, genes, self.X, self.Y))
         
-        self.food = self.rand.choice(board)
+        self.food = self.place_food()
         self.best_score = 0
 
         if show:
@@ -151,7 +151,7 @@ class Game:
 
     def play(self):
         """Play the game until all snakes dead."""
-        board = [(x, y) for x in range(self.X) for y in range(self.Y)]
+        #board = [(x, y) for x in range(self.X) for y in range(self.Y)]
         alive_snakes_set = set(self.snakes)
         while alive_snakes_set:
             if self.show:
@@ -161,7 +161,7 @@ class Game:
             for snake in alive_snakes_set:
                 has_eat = snake.move(self.food)
                 if has_eat:
-                    self.food = self.rand.choice(board)
+                    self.food = self.place_food()
                 if snake.score > self.best_score:
                     self.best_score = snake.score
             alive_snakes = [snake for snake in alive_snakes_set if not snake.dead]
@@ -174,6 +174,15 @@ class Game:
             score, steps = self.snakes[0].score, self.snakes[0].steps
 
         return score, steps, self.seed
+
+    def place_food(self):
+        board = set([(x, y) for x in range(self.X) for y in range(self.Y)])
+        for snake in self.snakes:
+            if not snake.dead:
+                for body in snake.body:
+                    board.discard(body)
+                
+        return self.rand.choice(list(board))
 
     def _draw(self):
         self.screen.fill(BLACK)

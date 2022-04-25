@@ -25,10 +25,7 @@ class Individual:
         """Get the fitness of Individual."""
         game = Game([self.genes])
         self.score, self.steps, self.seed = game.play()
-        self.fitness = self.score + 1 / self.steps
-        score = self.score
-        steps = self.steps
-        self.fitness = (score+0.5*(steps-steps/(score+1))/(steps+steps/(score+1)))*100000
+        self.fitness = (self.score + 1 / self.steps) * 100000
 
 class GA:
     """Genetic Algorithm.
