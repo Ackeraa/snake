@@ -57,17 +57,25 @@ class Grid(VGroup):
         self.text.become(Text(str(text), color=WHITE).scale(size).move_to(self.square.get_center()))
 
 class Info(VGroup):
-    def __init__(self, text="", pos=RIGHT*5, color=TEAL_D):
+    def __init__(self, text="", pos=DOWN*3, color=RED):
         self.pos = pos
-        self.text = Text(text, color=color, font_size=20)
+        text = self.enhance(text)
+        self.text = Text(text, color=color, font_size=16)
         self.text.shift(self.pos)
         super().__init__(self.text)
     
-    def update_text(self, text, pos=None, font_size=20):
+    def update_text(self, text, pos=DOWN*3, font_size=16):
         if pos is not None:
             self.pos = pos
-        self.text=self.text.become(Text(text, color=TEAL_D, font_size=font_size))
+        text = self.enhance(text)
+        self.text=self.text.become(Text(text, color=RED, font_size=font_size))
         self.text.shift(self.pos)
+
+    def enhance(self, text):
+        text1 = ""
+        for t in text:
+            text1 += t + " "
+        return text1[:-1]
 
 class Array(VGroup):
     def __init__(self, length, texts, size=0.6, color=WHITE, stroke_width=3, direction=RIGHT):
@@ -79,19 +87,22 @@ class Individual(VGroup):
     def __init__(self, happy=True, visible=True):
         super().__init__()
         head = Circle(stroke_width=2).set_color(random_color1(visible))
-        eyes = VGroup(Line(LEFT*0.2, RIGHT*0.2, stroke_width=1, color = random_color1(visible)),
-                      Line(LEFT*0.2, RIGHT*0.2, stroke_width=1, color = random_color1(visible)))\
+        eye_color = random_color1(visible)
+        eyes = VGroup(Line(LEFT*0.2, RIGHT*0.2, stroke_width=1, color = eye_color),
+                      Line(LEFT*0.2, RIGHT*0.2, stroke_width=1, color = eye_color))\
                       .arrange(RIGHT, buff=0.6).shift(UP*0.3)
         mouth = Triangle(stroke_width=1).scale(0.3).shift(DOWN*0.5).set_color(random_color1(visible))
         self.happy = happy
         if happy:
             mouth.rotate(180*DEGREES).shift(DOWN*0.1)
+        arm_color = random_color1(visible)
         arm1 = Line(UP*0.24+RIGHT*0.84, LEFT*0.7+DOWN*0.2, stroke_width=2,
-                    color = random_color1(visible)).shift(DOWN*1.25+LEFT*0.85)
+                    color = arm_color).shift(DOWN*1.25+LEFT*0.85)
         arm2 = Line(UP*0.24+LEFT*0.84, RIGHT*0.7+DOWN*0.2, stroke_width=2,
-                    color = random_color1(visible)).shift(DOWN*1.25+RIGHT*0.85)
-        leg1 = Line(UP, DOWN*0.8, stroke_width=2, color = random_color1(visible)).shift(DOWN*2.2+LEFT*0.7)
-        leg2 = Line(UP, DOWN*0.8, stroke_width=2, color = random_color1(visible)).shift(DOWN*2.2+RIGHT*0.7)
+                    color = arm_color).shift(DOWN*1.25+RIGHT*0.85)
+        leg_color = random_color1(visible)
+        leg1 = Line(UP, DOWN*0.8, stroke_width=2, color = leg_color).shift(DOWN*2.2+LEFT*0.7)
+        leg2 = Line(UP, DOWN*0.8, stroke_width=2, color = leg_color).shift(DOWN*2.2+RIGHT*0.7)
 
         self.add(head, eyes[0], eyes[1], mouth, arm1, arm2, leg1, leg2)
 

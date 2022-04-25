@@ -4,6 +4,7 @@ from ai_game import Game
 from settings import *
 
 class GA:
+
     def __init__(self, p_size=P_SIZE, c_size=C_SIZE, genes_len=GENES_LEN,
                      mutate_rate=MUTATE_RATE):
         self.p_size = p_size
@@ -36,5 +37,4 @@ class GA:
 
 
 
-
-#########################################################################
+############################################################################
