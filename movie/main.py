@@ -1,142 +1,131 @@
-from re import S
-import sys
-sys.path.append('../')
 from manim import *
+sys.path.append('../')
+from ai_game import Game as AiGame
 from helper import *
-from ai_game_noui import Game 
 import random
-import numpy as np
-import torch
+import math
 import copy
 
-class Final(Scene):
+
+class Main(Scene):
     def construct(self):
+        self.info = Info("")
         self.add_sound("bgm.mp3")
-        self.wait(4)
-        self.play_game(10, 97)
-        self.add_genes()
+        self.add_begin()
+        self.add_flow()
+        self.add_code_pic()
+        self.add_ai_game()
         self.add_nn()
-        self.transform_genes_to_nn_edges()
-        self.train_process()
-        self.mid_pic()
-        self.whole_picture()
-        self.end_pic()
+        self.add_main()
+        self.add_end()
 
-    def mid_pic(self):
-        self.remove(*self.mobjects)
-        t = Text("整体流程", font_size=24)
-        self.play(FadeIn(t))
-        self.play(FadeOut(t))
-
-    def end_pic(self):
+    def add_end(self):
         t = Text("The End.", font_size=24)
         self.play(Create(t))
+        self.wait(1.5)
 
-    def whole_picture(self, num1=None, num2=None):
-        n = 10
-        m = 4
-        vg0 = VGroup()
-        for i in range(m):
-            v1 = [round(random.random(),3) for _ in range(n)]
-            v2 = [round(random.random(),3) for _ in range(n)]
-            v1[5] = '...'
-            v2[5] = '...'
+    def info_update(self, text, pos=DOWN*3, font_size=16):
+        self.play(self.info.animate.update_text(text, pos, font_size))
 
-            p1 = Array(n, v1, size=0.3)
-            p2 = Array(n, v2, size=0.3)
-            for i in range(n):
-                p1[i][0].set(stroke_width=1.5)
-                p2[i][0].set(stroke_width=1.5)
+    def info_clear(self):
+        return self.info.animate.update_text("", pos=None, font_size=20)
 
-            vg = VGroup()
-            vg.add(p1, p2).arrange(RIGHT, buff=0.5)
-            vg0.add(vg).arrange(DOWN, buff=1.5)
+    def add_begin(self):
+        genes_list = []
+        n = 100
+        size = 20
+        for i in range(n):
+            genes_pth = os.path.join("../", "genes", "all", str(i))
+            with open(genes_pth, "r") as f:
+                genes = np.array(list(map(float, f.read().split())))
+                genes_list.append(genes)
+ 
+        self.matrix = get_matrix(size, 0.3, stroke_width=1.5, color=GRAY_C)
+        self.add(self.matrix)
+        game = AiGame(genes_list=genes_list)
+        for snake in game.snakes:
+            snake.color = random_color()
 
-        vg0.shift(UP*0.8+LEFT*3)
-        others = VGroup(Text("......").scale(0.5)).next_to(vg0, DOWN * 6)
-        self.add(others)
-        self.add(vg0)
-        vg1 = VGroup()
+        board = [(x, y) for x in range(game.X) for y in range(game.Y)]
+        alive_snakes_set = set(game.snakes)
+        steps = 0
 
-        self.wait()
-        anims1, anims2, anims3, anims4, anims5, anims6, anims7 = [], [], [], [], [], [], []
-        for i in range(m):
-            idx = random.randint(1, n - 2)
-            if idx % 2 == 0:
-                idx += 1
-            p1 = vg0[i][0]
-            p2 = vg0[i][1]
+        set_food = []
+        set_head = []
+        set_body = []
+        set_color = []
+        while alive_snakes_set:
+            steps += 1
+            for snake in alive_snakes_set:
+                has_eat = snake.move(game.food)
+                if has_eat:
+                    game.food = game.rand.choice(board)
+                if snake.score > game.best_score:
+                    game.best_score = snake.score
+            alive_snakes = [snake for snake in alive_snakes_set if not snake.dead]
+            alive_snakes_set = set(alive_snakes)
 
-            c1 = VGroup(*copy.deepcopy(p1[:idx]), *copy.deepcopy(p2[idx:]))\
-                        .arrange(RIGHT, buff=0) 
-            c1.next_to(p1, DOWN*2.4)
-            anims1.append(ReplacementTransform(p1[:idx].copy(), c1[:idx]))
-            anims2.append(ReplacementTransform(p2[idx:].copy(), c1[idx:]))
+            set_food.append(game.food)
+            bodys = []
+            heads = []
+            colors = []
+            for snake in alive_snakes:
+                tmp_body = []
+                for body in snake.body:
+                    tmp_body.append(body)
+                bodys.append(tmp_body)
+                heads.append(snake.body[0])
+                colors.append(snake.color)
+            set_head.append(heads)
+            set_body.append(bodys)
+            set_color.append(colors)
 
-            c2 = VGroup(*copy.deepcopy(p2[:idx]), *copy.deepcopy(p1[idx:]))\
-                        .arrange(RIGHT, buff=0) 
-            c2.next_to(p2, DOWN*2.4)
-            anims1.append(ReplacementTransform(p1[:idx].copy(), c2[:idx]))
-            anims2.append(ReplacementTransform(p1[idx:].copy(), c2[idx:]))
+        nums = 2000
+        shows = [[i for i in range(nums)]]
+        #shows.append([i for i in range(steps//2-2*nums, steps//2)])
+        #shows.append([i for i in range(steps-nums, steps-20)])
+        for show in shows:
+            for step in show:
+                for i in range(size):
+                    for j in range(size):
+                        self.matrix[i][j].set_fill(BLACK, opacity=1)
+                food = set_food[step]
+                heads = set_head[step]
+                bodys = set_body[step]
+                colors = set_color[step]
+                self.matrix[food[1]][food[0]].set_fill(PURE_RED, opacity=1)
+                # for head in heads:
+                    # self.matrix[head[1]][head[0]].set_fill(WHITE, opacity=1)
+                for i in range(len(bodys)):
+                    for body in bodys[i]:
+                        self.matrix[body[1]][body[0]].set_fill(colors[i], opacity=1)
+                self.wait(0.04)
+                # if step == show[0] and show != shows[0]:
+                    # self.play(FadeIn(self.matrix), run_time=1)
+            # if show != shows[-1]:
+                # self.play(FadeOut(self.matrix), run_time=1)
 
-            anims5.append(p2.animate.next_to(p1, DOWN*0.55))
-            anims5.append(c2.animate.next_to(c1, DOWN*0.55))
-            vg1.add(VGroup(c1, c2))
+        self.play(FadeOut(self.matrix))
 
-            ls = [i for i in range(n)]
-            num = random.randint(0, 4)
-            cs = random.sample(ls, num)
-            for j in cs:
-                if c1[j][1].text != "...": 
-                    anims3.append(c1[j][0].animate.set_fill(TEAL, opacity=0.4))
-                    new_t1 = str(round(float(c1[j][1].text) + np.random.normal()*0.2, 2))
-                    anims4.append(c1[j].animate.update_text(new_t1, size=0.15))
-            num = random.randint(0, n)
-            cs = random.sample(ls, 4)
-            for j in cs:
-                if c2[j][1].text != "...": 
-                    anims3.append(c2[j][0].animate.set_fill(TEAL, opacity=0.4))
-                    new_t1 = str(round(float(c2[j][1].text) + np.random.normal()*0.2, 2))
-                    anims4.append(c2[j].animate.update_text(new_t1, size=0.15))
+    def add_flow(self):
 
-        anims5.append(others.animate.next_to(vg1[-1][1], DOWN * 3 + LEFT * 8))
+        sm = VGroup()
+        n = 25
+        m = int(math.sqrt(n))
+        population = VGroup()
+        for i in range(n):
+            if i == n // 2:
+                population.add(Ellipsi().scale(0.5))
+            else:
+                population.add(Individual(happy=random.random()>0.5).scale(0.2))
 
-        p_num = 5
-        c_num = 3
-        indics = [i for i in range(8)]
-        p_del = random.sample(indics, p_num)
-        c_del = random.sample(indics, c_num)
-        for p in p_del:
-            i1 = p // 2
-            i2 = p % 2
-            anims6.append(FadeOut(vg0[i1][i2]))
-        for c in c_del:
-            i1 = c // 2
-            i2 = c % 2
-            anims6.append(FadeOut(vg1[i1][i2]))
+        population.arrange_in_grid(rows=m).shift(UP*0.5)
+        self.info_update("种群", pos=RIGHT*5, font_size=16)
+        self.play(FadeIn(population))
 
-
-        # cross
-        info = Info("交叉")
-        self.add(info)
-        self.play(*anims1, run_time=1)
-        self.play(*anims2, run_time=1)
-
-        # mutate
-        self.play(info.animate.update_text("变异"))
-        self.play(*anims3, run_time=1)
-        self.play(*anims4, run_time=1)
-
-        # plot rect
-        self.play(info.animate.update_text(""))
-        self.play(*anims5, run_time=1)
-        rec0 = RoundedRectangle(width=4, height=7.8, stroke_color=RED,
-                                stroke_width=2, corner_radius=0.2)
-        rec0.shift(LEFT*4.75)
-        self.play(FadeIn(rec0))
-
-        # transform to nn edge
-        self.play(info.animate.update_text("转化为神经网络参数"))
+        # Individual.
+        self.play(population.animate.shift(LEFT*5.5).scale(0.5),
+                  self.info_clear())
 
         arr1 = Arrow(start=LEFT+UP, end=RIGHT, stroke_width=2,
                      max_tip_length_to_length_ratio=0.05, color=BLUE)
@@ -146,379 +135,924 @@ class Final(Scene):
                      max_tip_length_to_length_ratio=0.05, color=BLUE)
         arr_vg = VGroup(arr1, arr2, arr3).arrange(DOWN, buff=2.3)
         arr_vg.shift(LEFT*1.9)
-        self.play(FadeIn(arr_vg))
 
-        vgg = VGroup(self.nn2, self.nn_edges2)
-        vgg.scale(0.2)
-        vg_1 = VGroup(*[vgg.copy() for _ in range(4)]).arrange(DOWN, buff=0.4)
-        vg_1.add(VGroup(Text("......").scale(0.5))).arrange(DOWN, buff=0.4)
-        vg_1.shift(LEFT*0.1)
-        vg__ = VGroup(vg1, vg0)
-        self.play(ReplacementTransform(vg__.copy(), vg_1))
+        individuals = VGroup()
+        for i in range(m):
+            if i == m // 2:
+                individuals.add(Ellipsi().scale(0.5))
+            else:
+                individuals.add(Individual(happy=random.random()>0.5).scale(0.2))
+        individuals.arrange(DOWN, buff=0.6).shift(LEFT*2.5)
 
-        # play game
-        self.play(info.animate.update_text(""))
+        arr = VGroup()
+        dot = Dot().move_to(population[14])
+        for i in range(m):
+            arr.add(Arrow(start=dot, end=individuals[i], stroke_width=1.5,
+                          max_tip_length_to_length_ratio=0.05, color=GRAY_B))
+        self.info_update("个体", pos=RIGHT*5, font_size=16)
+        self.play(FadeIn(arr), FadeIn(individuals))
+        sm.add(individuals)
+        sm.add(arr)
 
-        matrix = get_matrix(10, 0.7, GRAY, stroke_width=1).scale(0.2)
-        matrix[5][5].set_fill(WHITE, opacity=1)
-        matrix[5][6].set_fill(PURE_BLUE, opacity=1)
-        matrix[4][6].set_fill(PURE_BLUE, opacity=1)
-        matrix[2][2].set_fill(PURE_RED, opacity=1)
-        vg_2 = VGroup(*[matrix.copy() for _ in range(4)])\
-                .arrange(DOWN, buff=0.6)
-        vg_2.add(VGroup(Text("......").scale(0.5))).arrange(DOWN, buff=0.4)
-        for i in range(5):
-            vg_2[i].next_to(vg_1[i], RIGHT)
-        vg_2.shift(RIGHT*0.6)
-        vg_2[4].shift(RIGHT)
-        self.play(FadeIn(vg_2))
+        # Genes.
+        genes = VGroup()
+        anims = []
+        for i in range(m):
+            if i == m // 2:
+                genes.add(Ellipsi(color=BLACK).scale(0.5))
+            else:
+                genes.add(Genes(5).scale(0.3))
+                anims.append(ReplacementTransform(individuals[i][2].copy(), genes[i]))
+        genes.arrange(DOWN, buff=0.6).shift(LEFT*2)
+        self.info_update("基因", pos=RIGHT*5, font_size=16)
+        self.wait(0.3)
+        self.play(*anims)
+        sm.add(genes)
 
-        arr_vg2 = VGroup()
-        for _ in range(4):
-            arr1 = Arrow(start=LEFT*0.2, end=RIGHT*0.2, stroke_width=1,
-                         max_tip_length_to_length_ratio=0.2)
-            arr2 = Arrow(start=RIGHT*0.2, end=LEFT*0.2, stroke_width=1,
-                         max_tip_length_to_length_ratio=0.2)
-            arr_vg2 += VGroup(arr1, arr2).arrange(DOWN, buff=0)
+        # NN.
+        nns = VGroup()
+        anims = []
+        for i in range(m):
+            if i == m // 2:
+                nns.add(Ellipsi().scale(0.5))
+            else:
+                nns.add(NN().scale(0.25))
+            anims.append(ReplacementTransform(genes[i].copy(), nns[i]))
+        nns.arrange(DOWN, buff=0.6)
+        sm.add(nns)
 
-        arr_vg2.arrange(DOWN, buff = 1.57)
-        arr_vg2.shift(UP*0.2+RIGHT)
-        self.play(FadeIn(arr_vg2))
-        self.play(info.animate.update_text("模拟至游戏结束，计算得分"))
+        arr1 = VGroup()
+        for i in range(m):
+            dot1 = Dot().move_to(genes[i]).shift(LEFT*0.2)
+            dot2 = Dot().move_to(nns[i]).shift(LEFT*0.3)
+            arr1.add(Arrow(start=dot1, end=dot2, stroke_width=1.5,
+                          max_tip_length_to_length_ratio=0.05, color=GRAY_B))
+        self.info_update("转化为神经网络参数", pos=RIGHT*5, font_size=16)
+        self.play(FadeIn(arr1))
+        self.play(*anims)
+        sm.add(arr1)
 
-        box_vg = VGroup()
-        for i in range(4):
-            rec = RoundedRectangle(width=4, height=1.6, stroke_color=TEAL,
-                                    stroke_width=2, corner_radius=0.3)
-            box_vg += rec
-        box_vg.arrange(DOWN, buff=0.2)
-        box_vg.shift(RIGHT+UP*0.2)
-        self.play(FadeIn(box_vg))
+        # Game.
+        games = VGroup()
+        for i in range(m):
+            if i == m // 2:
+                games.add(Ellipsi().scale(0.5))
+            else:
+                games.add(Game().scale(0.7))
+        games.arrange(DOWN, buff=0.7).shift(RIGHT*2)
+
+        arr2 = VGroup()
+        for i in range(m):
+            if i == m // 2:
+                arr2.add(Ellipsi().scale(0.5))
+            else:
+                dot1 = Dot().move_to(nns[i]).shift(RIGHT*0.5+DOWN*0.3)
+                dot2 = Dot().move_to(games[i]).shift(LEFT*0.6+DOWN*0.3)
+                ar = CurvedArrow(start_point=[dot1.get_x(), dot1.get_y(), 0],
+                                  end_point=[dot2.get_x(), dot2.get_y(), 0],
+                                  stroke_width=1.5, color=GRAY_B)
+                x0, y0 = ar.get_x(), ar.get_y()
+                x1, y1 = 4 * dot1.get_x() - 3 * x0, 4 * dot1.get_y() - 3 * y0
+                x2, y2 = 4 * dot2.get_x() - 3 * x0, 4 * dot2.get_y() - 3 * y0
+                ar = CurvedArrow(start_point=[x1, y1, 0], end_point=[x2, y2, 0],
+                                 stroke_width=1.5, color=GRAY_B).scale(0.25)
+                ar1 = CurvedArrow(start_point=[x2, y2, 0], end_point=[x1, y1, 0],
+                                 stroke_width=1.5, color=GRAY_B).scale(0.25).shift(DOWN*0.5)
+
+                arr2.add(ar, ar1)
+        self.info_update("进行游戏，直至蛇死亡", pos=RIGHT*5, font_size=16)
+        self.play(FadeIn(games))
+        sm.add(games)
+
+        # Simulate.
+        rects = VGroup()
+        for i in range(m):
+            if i != m // 2:
+                rects.add(Rectangle(stroke_width=1.5, color=BLUE_C).surround(VGroup(nns[i], games[i])))
+        self.play(FadeIn(rects))
+        self.play(FadeIn(arr2))
+        sm.add(rects)
+        sm.add(arr2)
+
+        # Show passing flash.
+        anims = []
+        anims2 = []
+        ids = [0, 2, 5, 7]
+        ids2 = [1, 3, 6, 8]
+        t1s = []
+        t2s = []
+        for i in range(0, m - 1):
+            e2 = arr2[ids[i]].copy()
+            e1 = arr2[ids2[i]].copy()
+            run_time = 1
+            color = BLUE_E
+            anims.append(ShowPassingFlash(e1.copy().set_color(color),
+                                          run_time=run_time,
+                                          time_width=run_time))
+            color = RED_E
+            anims2.append(ShowPassingFlash(e2.copy().set_color(color),
+                                          run_time=run_time,
+                                          time_width=run_time))
+            t1s.append(Text("传入状态", font_size=11).next_to(arr2[ids2[i]],UP*0.1))
+            t2s.append(Text("传回结果", font_size=11).next_to(arr2[ids[i]],DOWN*0.1))
+        self.play(*anims)
+        self.play(FadeIn(*t1s))
+        self.play(*anims2)
+        self.play(FadeIn(*t2s))
+        sm.add(*t1s)
+        sm.add(*t2s)
+        for _ in range(2):
+            self.play(*anims)
+            self.play(*anims2)
+        
+        # Fitness.
+        fits = VGroup()
+        for i in range(m):
+            if i == m // 2:
+                fits.add(Ellipsi(BLACK).scale(0.5))
+            else:
+                fits.add(MathTex("f(score, steps)").scale(0.4).next_to(games[i], RIGHT))
+        
+        self.info_update("奖励函数, 计算适应度", pos=RIGHT*5, font_size=16)
+        self.play(FadeIn(fits))
+        self.wait()
+
+        # Envolve.
+
+        self.play(Transform(fits, population), self.info_clear())
+        self.wait(0.4)
+        self.play(FadeOut(*sm, fits), population.animate.shift(RIGHT*3).scale(2))
+
+        n_die = 16
+        n_alive = n - n_die
+        indics = [i for i in range(len(population)) if i != n//2]
+        dies = random.sample(indics, n_die)
+        alives = [i for i in indics if i not in dies]
+        self.info_update("淘汰个体", pos=RIGHT*5, font_size=16)
+        run_time = 1
+        for x in dies:
+            self.play(FadeOut(population[x]), run_time=run_time)
+            run_time -= 0.05
+
+        children = VGroup(*[Individual(visible=False).scale(0.2) for _ in range(n_die)])\
+                    .arrange_in_grid(rows=int(math.sqrt(n_die))).next_to(population, RIGHT * 3)
+
+        num = len(population[0])
+        indics = [i for i in range(num)]
+
+        # Cross.
+        anims = []
+        for i in range(n_die):
+            i1, i2 = random.sample(alives, 2)
+            p1, p2 = population[i1], population[i2]
+            n_from_p1 = random.randint(1, num - 1)
+            from_p1 = random.sample(indics, n_from_p1)
+            from_p2 = list(set(indics) - set(from_p1))
+            
+            vp1 = VGroup()
+            vc1 = VGroup()
+            for x in from_p1:
+                children[i][x].set_color(p1[x].color)
+                if x == 3 and children[i].happy != p1.happy:
+                    children[i].turn_mouth()
+                vp1.add(p1[x])
+                vc1.add(children[i][x])
+            anims.append(ReplacementTransform(vp1.copy(), vc1))
+
+            vp2 = VGroup()
+            vc2 = VGroup()
+            for x in from_p2:
+                children[i][x].set_color(p2[x].color)
+                if x == 3 and children[i].happy != p2.happy:
+                    children[i].turn_mouth()
+                vp2.add(p2[x])
+                vc2.add(children[i][x])
+            anims.append(ReplacementTransform(vp2.copy(), vc2))
+        self.info_update("交叉", pos=RIGHT*5, font_size=16)
+        for anim in anims:
+            self.play(anim, run_time=0.3)
+
+        # Mutate.
+        indics = [1, 7, 8, 13]
+        anims = []
+        # mouth.
+        anims.append(children[1][3].animate.become(
+                Circle(stroke_width=1).scale(0.06).next_to(children[1][2], DOWN*0.3).shift(LEFT*0.1)))
+        # head
+        anims.append(children[7][0].animate.become(
+                Circle(stroke_width=2).scale(0.25).move_to(children[7][3]).shift(UP*0.1)))
+
+        # head
+        anims.append(children[8][0].animate.become(
+                Triangle(stroke_width=2).scale(0.4).move_to(children[8][3]).shift(UP*0.2)))
+
+        # arm
+        anims.append(FadeOut(children[13][6]))
+
+        self.info_update("变异", pos=RIGHT*5, font_size=16)
+        for i in range(len(anims)):
+            self.play(Indicate(children[indics[i]], color=RED))
+            self.play(anims[i])
+        
+        # New population.
+        anims = []
+        for i, x in enumerate(dies):
+            population[x] = children[i].copy().move_to(population[x])
+            anims.append(ReplacementTransform(children[i], population[x]))
+        self.info_update("生成下一代", pos=RIGHT*5, font_size=16)
+        self.play(*anims)
+        self.wait()
+
+        # Next generation.
+        self.play(population.animate.shift(LEFT*3).scale(0.5),
+                  FadeIn(*sm), self.info_clear())
+        self.info_update("进行下一轮", pos=RIGHT*5, font_size=16)
+        self.wait()
+        self.play(FadeOut(*self.mobjects))
+
+    def add_code_pic(self):
+
+        code1 = MyCode("ai_game_1.py")
+        code2 = MyCode("nn_1.py")
+        code3 = MyCode("main_1.py")
+        self.codes = VGroup(code1, code2, code3).arrange(RIGHT, buff=1)
+
+        title1 = MathTex("ai\_game.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code1, UP*0.2)
+        title2 = MathTex("nn.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code2, UP*0.2)
+        title3 = MathTex("main.py", font_size=22).set_color([BLUE_E, TEAL_D]).next_to(code3, UP*0.2)
+        self.codes_title = VGroup(title1, title2, title3)
+
+        color = RED
+        t1 = Text("实 现 贪 吃 蛇", font_size=16, color=color).next_to(title1, UP)
+        t2 = Text("实 现 神 经 网 络", font_size=16, color=color).next_to(title2, UP)
+        t3 = Text("实 现 遗 传 算 法", font_size=16, color=color).next_to(title3, UP)
+        self.codes_desc = VGroup()
+        self.codes_desc.add(t1, t2, t3)
+        for i in range(3):
+            self.play(FadeIn(self.codes_desc[i], shift=DOWN))
+            self.play(FadeIn(self.codes[i], self.codes_title[i], scale=0.5))
+            self.wait(1)
+    
+    def add_ai_game(self):
+    
+        title = MathTex("ai\_game.py", font_size=24).set_color([BLUE_E, TEAL_D]).shift(UP*3.5+RIGHT*3)
+        anims = []
+        code = MyCode("ai_game_2.py")
+        anims.append(ReplacementTransform(self.codes[0], code))
+        anims.append(ReplacementTransform(self.codes_title[0], title))
+        anims.append(FadeOut(self.codes[1:]))
+        anims.append(FadeOut(self.codes_title[1:]))
+        anims.append(FadeOut(self.codes_desc))
+        self.play(*anims)
+
+        anims = []
+        lines = [8, 11, 14, 19, 22]
+        infos = ["初始化蛇", "蛇移动", "获取当前状态（作为神经网络输入）",
+                 "初始化游戏（可含有多条蛇)", "进行一轮游戏"]
+        arr = CodeArr(code, lines[0])
+        self.play(FadeIn(arr))
+        self.info_update(infos[0])
+        for i in range(1, len(lines)):
+            self.play(arr.move(lines[i]))
+            self.info_update(infos[i])
+            self.wait(1.5)
+        # snake
+        ## __init__
+        code3 = MyCode("ai_game_3.py").code
+        self.play(FadeOut(code.code[8:], shift=DOWN),
+                  FadeOut(arr), self.info_clear())
+        code.code[8:] = code3[8:]
+        self.play(FadeIn(code.code[8:], shift=UP))
+        self.play(Indicate(code.code[9:16], color=RED))
+        self.info_update("初始化蛇的位置、方向、得分等")
+        self.wait(1.5)
+        self.play(Indicate(code.code[16], color=RED))
+        self.info_update("用于判断蛇是否进入死循环")
+        self.wait(2)
+        self.play(Indicate(code.code[17], color=RED))
+        self.info_update("根据基因初始化神经网络")
+        self.wait(2)
+        
+        ## get_state
+        code4 = MyCode("ai_game_4.py").code
+        self.play(FadeOut(code.code[8:], shift=DOWN),
+                  self.info.animate.update_text("", RIGHT*4, font_size=16))
+        code.code[8:] = code4[8:]
+        self.play(FadeIn(code.code[8:14], shift=UP))
+        self.play(Indicate(code.code[9:12], color=RED))
+        self.info_update("蛇头方向")
+        self.wait(2)
+        self.info_update("")
+        self.play(Create(code.code[15:35]), run_time=6)
+        self.info_update("蛇头8个方向上是否有食物、自身、墙")
         self.wait(2)
 
-        # delete
-        self.play(info.animate.update_text("根据得分淘汰个体"))
+        ## move
+        code5 = MyCode("ai_game_5.py").code
+        self.play(FadeOut(code.code[8:], shift=DOWN), self.info_clear())
+        code.code[8:] = code5[8:]
+        self.play(FadeIn(code.code[8:], shift=UP))
+        arr.move(8, False)
+        self.play(FadeIn(arr))
+        indics = [10, 11, 14, 18, 22, 23, 27, 28, 34]
+        infos = ["获取当前状态", "将状态输入神经网络，预测下一步移动方向", "蛇头下一步的位置",
+                 "判断是否撞墙或撞自己", "没有撞墙，插入新的蛇头",  "是否吃到食物",
+                 "舍去旧的蛇尾", "判断是否出现死循环", "返回是否吃到了食物"]
+        for i in range(len(indics)):
+            self.play(arr.move(indics[i]))
+            self.info_update(infos[i])
+            self.wait(2)
 
-        path = VMobject()
-        dot = Dot(radius=0.01).shift(RIGHT*3.5)
-        path.set_points_as_corners([dot.get_center(), dot.get_center()])
-        def update_path(path):
-            previous_path = path.copy()
-            previous_path.add_points_as_corners([dot.get_center()])
-            path.become(previous_path)
-        path.add_updater(update_path)
+        # game
+        ## __init__
+        code6 = MyCode("ai_game_6.py").code
+        self.play(FadeOut(code.code[6:], shift=DOWN),
+                  FadeOut(arr), self.info_clear())
+        code.code[6:] = code6[6:]
+        self.play(FadeIn(code.code[6:], shift=UP))
+        self.play(Indicate(code.code[9:11], color=RED))
+        self.info_update("初始化界面大小")
+        self.wait(1)
+        self.play(Indicate(code.code[11:13], color=RED))
+        self.info_update("初始化随机函数（用于训练过程的复现）")
+        self.wait(2)
+        self.play(Indicate(code.code[14:21], color=RED))
+        self.info_update("根据基因列表生成若干条蛇")
+        self.wait(2)
+        self.play(Indicate(code.code[22], color=RED))
+        self.info_update("生成初始食物")
+        self.wait(1)
 
-        self.add(path, dot)
-        self.play(dot.animate.shift(RIGHT*0.2))
-        self.play(dot.animate.shift(UP*4))
-        self.play(dot.animate.shift(LEFT*8.5))
-        self.play(dot.animate.shift(DOWN*0.1))
-        vg = VGroup()
-
-        t_vg = VGroup()
-        for i in range(m):
-            for j in range(2):
-                if i * 2 + j not in p_del:
-                    if len(t_vg) == 0:
-                        t_vg.add(vg0[i][j])
-                    else:
-                        t_vg.add(vg0[i][j])
-                        vg.add(t_vg.copy().arrange(RIGHT, buff=0.5)).arrange(DOWN, buff=1.5)
-                        anims7.append(ReplacementTransform(t_vg[0], vg[-1][0])) 
-                        anims7.append(ReplacementTransform(t_vg[1], vg[-1][1])) 
-                        t_vg = VGroup()
-                if i * 2 + j not in c_del:
-                    if len(t_vg) == 0:
-                        t_vg.add(vg1[i][j])
-                    else:
-                        t_vg.add(vg1[i][j])
-                        vg.add(t_vg.copy().arrange(RIGHT, buff=0.5)).arrange(DOWN, buff=1.5)
-                        anims7.append(ReplacementTransform(t_vg[0], vg[-1][0])) 
-                        anims7.append(ReplacementTransform(t_vg[1], vg[-1][1])) 
-                        t_vg = VGroup()
-        vg.shift(UP*0.6+LEFT*3)
-        #others = VGroup(Text("......").scale(0.5)).next_to(vg, DOWN * 6)
-        #self.add(others)
-
-        self.play(*anims6, run_time=1)
-        self.play(FadeOut(vg_1), FadeOut(vg_2), FadeOut(arr_vg2), FadeOut(box_vg),
-                  FadeOut(path), FadeOut(dot), FadeOut(arr_vg), FadeOut(rec0))
-        self.play(info.animate.update_text("下一轮, 并重复"))
-        self.play(*anims7, run_time=1)
-
+        ## play
+        code7 = MyCode("ai_game_7.py").code
+        self.play(FadeOut(code.code[8:], shift=DOWN), self.info_clear())
+        code.code[8:] = code7[8:]
+        self.play(FadeIn(code.code[8:], shift=UP))
+        arr.move(11, False)
+        self.play(FadeIn(arr))
+        self.info_update("当还有蛇存活时")
         self.wait()
-        self.remove(*self.mobjects)
-
-    def train_process(self):
-        self.nn2 = self.nn.copy()
-        self.nn_edges2 = self.nn_edges.copy()
-        self.play(self.nn.animate.shift(RIGHT * 5).scale(0.9),
-                  self.nn_edges.animate.shift(RIGHT * 5).scale(0.9))
-        t1 = Text("上", font_size=12).next_to(self.nn[3][0], RIGHT, buff=0.1)
-        t2 = Text("下", font_size=12).next_to(self.nn[3][1], RIGHT, buff=0.1)
-        t3 = Text("左", font_size=12).next_to(self.nn[3][2], RIGHT, buff=0.1)
-        t4 = Text("右", font_size=12).next_to(self.nn[3][3], RIGHT, buff=0.1)
-        self.add(t1, t2, t3, t4)
-
-        text_l = [Text("1.蛇首方向: ", font_size=18),
-                Text("2.蛇尾方向: ", font_size=18),
-                Text("3.蛇首八个方向(从垂直向上起，顺时针45')上,", font_size=18),
-                Text("是否有食物: ", font_size=18),
-                Text("是否有自身: ", font_size=18),
-                Text("与墙的距离(取倒数): ", font_size=18)]
-        self.text_vg = VGroup(*text_l).arrange(DOWN, center=False, aligned_edge=LEFT)  
-        self.text_vg[3].shift(RIGHT*0.3)
-        self.text_vg[4].shift(RIGHT*0.3)
-        self.text_vg[5].shift(RIGHT*0.3)
-
-        self.text_vg.shift(LEFT * 6 + DOWN)
-
-        self.add(self.text_vg)
-        self.play_game(10, 5, True)
- 
-    def play_game(self, size, score, is_train=False, speed=None):
-        model_pth = os.path.join("../", "model", "best_individual", "nn_"+str(score)+'.pth')
-        nn = torch.load(model_pth)
-
-        seed_pth = os.path.join("../seed", "seed_"+str(score)+'.txt')
-        with open(seed_pth, "r") as f:
-            seed = int(f.read())
- 
-        self.matrix = get_matrix(size, 0.7, GRAY)
-        if is_train:
-            self.matrix.shift(LEFT * 4.5, UP * 1.5).scale(0.6)
-        self.add(self.matrix)
-        game = Game()
-        game.rand = random.Random(seed)
-        game.new()
-        self.text_vg2 = None
-        while not game.game_over:
-            state = game.get_state()
-            action = nn.predict(state)
-            game.move(action)
-            if is_train:
-                self.update_state(state, action, speed)
-            
-            head = game.snake[0]
-            bodys = game.snake[1:]
-            food = game.food
-            
-            if game.game_over:
-                break
-
-            for i in range(size):
-                for j in range(size):
-                    self.matrix[i][j].set_fill(BLACK, opacity=1)
-
-            self.matrix[head[1]][head[0]].set_fill(WHITE, opacity=1)
-            self.matrix[food[1]][food[0]].set_fill(PURE_RED, opacity=1)
-            for body in bodys: 
-                self.matrix[body[1]][body[0]].set_fill("#193BB1", opacity=1)
-            if speed is not None:
-                self.wait(speed)
-            elif is_train:
-                self.wait(0.2)
-            else:
-                self.wait(0.02)
-
+        self.play(arr.move(13))
+        self.info_update("每条蛇依次移动")
         self.wait()
-        self.play(FadeOut(self.matrix))
-
-    def update_state(self, state, action, speed):
-        if self.text_vg2 is not None:
-            self.remove(self.text_vg2)
-            for i in range(4):
-                for node in self.nn[i]:
-                    node.set_color(WHITE)
-
-        see_food, see_self, dis = [], [], []
-        for i in range(8):
-            dis.append(state[i * 3])
-            see_food.append(state[i * 3 + 1])
-            see_self.append(state[i * 3 + 2])
-
-        head_dir = state[24:28]
-        tail_dir = state[28:32]
-        def get_text(a, y):
-            s = "["
-            for x in a:
-                c = str(round(x, 2)) if y else str(int(x))
-                s += c + ",   "
-            return s[:-4]+"]"
-
-        text = [Text(get_text(head_dir, 0), font_size=18).next_to(self.text_vg[0], RIGHT),
-                Text(get_text(tail_dir, 0), font_size=18).next_to(self.text_vg[1], RIGHT),
-                Text(get_text(see_food, 0), font_size=18).next_to(self.text_vg[3], RIGHT),
-                Text(get_text(see_self, 0), font_size=18).next_to(self.text_vg[4], RIGHT),
-                Text(get_text(dis, 1), font_size=18).next_to(self.text_vg[5], RIGHT)]
-        self.text_vg2 = VGroup(*text)
-        self.add(self.text_vg2)
-        self.play(Transform(self.text_vg2.copy(), self.nn[0]), run_time=0.8)
-        ids = head_dir + tail_dir + see_food + see_self + dis
-        for i in range(len(ids)):
-            if ids[i] != 0:
-                self.nn[0][i].set_color(BLUE)
-
-        pre = 0
-        for i in range(3):
-            edges = self.nn_edges[pre : pre + self.struct[i] * self.struct[i + 1]]
-            anims = []
-            for edge in edges:
-                e = edge.copy().set_color(PURE_RED)
-                run_time = 0.3
-                anims.append(ShowPassingFlash(e.copy().set_color(PURE_RED),
-                                              run_time=run_time,
-                                              time_width=run_time))
-            self.play(*anims)
-
-            if i != 2:
-                ids = random.sample([i for i in range(self.struct[i + 1])], 
-                                      random.randint(4, self.struct[i + 1] - 1))
-                for j in ids:
-                    self.nn[i + 1][j].set_color(BLUE)
-            else:
-                self.nn[i + 1][action].set_color(BLUE)
-                self.wait(0.4)
-
-            pre += self.struct[i] * self.struct[i + 1]
-
-    def transform_genes_to_nn_edges(self):
-        anims = [ReplacementTransform(self.genes, self.nn_edges)]
-        colors = [random_color() for _ in range(10)]
-        for e in self.nn_edges:
-            anims.append(e.animate.set_stroke_width(random.random())\
-                         .set_color(random.choice(colors)))
-
-        self.play(*anims)
+        self.play(arr.move(15))
+        self.info_update("如果食物被吃掉，生成新食物")
+        self.wait(1.5)
+        self.play(arr.move(16))
+        self.info_update("舍弃死亡的蛇")
+        self.wait(1.5)
+        self.play(arr.move(23))
+        self.info_update("返回得分、步数及随机数种子")
+        self.wait(1.5)
+        self.play(FadeOut(*self.mobjects))
 
     def add_nn(self):
-        self.nn = VGroup()
-        struct = [32, 12, 8, 4]
-        self.struct = struct
-        buffs = [0.1, 0.3, 0.3, 0.3]
-        for i in range(4):
-            self.nn.add(VGroup(*[Circle(0.06, color=WHITE, stroke_width=1.5) 
-                for _ in range(struct[i])]).arrange(DOWN, buff=buffs[i])).arrange(RIGHT, 2)
-        self.nn.shift(LEFT * 2)
-        self.add(self.nn)
 
-        self.nn_edges = VGroup()
-        for i in range(3):
-            for j in range(struct[i]):
-                for k in range(struct[i + 1]):
-                    e = Line(self.nn[i][j], self.nn[i + 1][k], stroke_width=0.3, color=WHITE)
-                    self.add(e)
-                    self.nn_edges.add(e)
+        # Introduce code structure.
+        anims = []
+        anims.append(FadeIn(self.codes[1:]))
+        anims.append(FadeIn(self.codes_title[1:]))
+        anims.append(FadeIn(self.codes_desc[1:]))
+        self.play(*anims)
         self.wait()
 
-        '''
-        text1 = Text("Input", font_size=18).next_to(self.nn[0], UP * 0.5)
-        always(text1.next_to, self.nn[0], UP * 0.5)
-        text2 = Text("Hidden1", font_size=18).next_to(self.nn[1], UP * 0.5)
-        always(text2.next_to, self.nn[1], UP * 0.5)
-        text3 = Text("Hidden2", font_size=18).next_to(self.nn[2], UP * 0.5)
-        always(text3.next_to, self.nn[2], UP * 0.5)
-        text4 = Text("Output", font_size=18).next_to(self.nn[3], UP * 0.5)
-        always(text4.next_to, self.nn[3], UP * 0.5)
-        self.play(FadeIn(text1), 
-                  FadeIn(text2),
-                  FadeIn(text3),
-                  FadeIn(text4), run_time=0.3)
-        '''
-
-    def add_genes(self):
-        n = 10
-        v1 = [round(random.random(),3) for _ in range(n)]
-        v1[5] = '...'
-        v2 = [round(random.random(),3) for _ in range(n)]
-        v2[5] = '...'
-
-        p1 = Array(n, v1)
-        p2 = Array(n, v2)
-
-        vg = VGroup()
-        vg.add(p1, p2).arrange(RIGHT, buff=1)
-        vg.move_to(2*UP)
-        self.add(vg)
-        #self.play(FadeIn(vg))
-    
-        idx = 3
         anims = []
-        for i in range(idx):
-            anims.append(p1[i][0].animate.set_fill(BLUE, opacity=0.4))
-            anims.append(p2[i][0].animate.set_fill(GREEN, opacity=0.4))
-        for i in range(idx, n):
-            anims.append(p1[i][0].animate.set_fill(MAROON, opacity=0.4))
-            anims.append(p2[i][0].animate.set_fill(PINK, opacity=0.4))
+        title = MathTex("nn.py", font_size=24).set_color([BLUE_E, TEAL_D]).shift(UP*3.7+RIGHT*3)
+        code = MyCode("nn_2.py")
+        anims.append(ReplacementTransform(self.codes[1], code))
+        anims.append(ReplacementTransform(self.codes_title[1], title))
+        anims.append(FadeOut(self.codes[2]))
+        anims.append(FadeOut(self.codes_title[2]))
+        anims.append(FadeOut(self.codes_desc[1:]))
         self.play(*anims)
 
-        arrow1 = Arrow(start=0.5*UP, end=DOWN).shift(UP)
-        text1 = Text("交叉", font_size=18).next_to(arrow1, RIGHT)
-        self.play(FadeIn(arrow1), FadeIn(text1))
+        anims = []
+        lines = [5, 8, 11, 14]
+        infos = ["初始化神经网络", "设置神经网络权重", "前向传播", "进行预测"]
+        arr = CodeArr(code, lines[0])
+        self.play(FadeIn(arr))
+        self.info = Info("")
+        self.info_update(infos[0])
+        for i in range(1, len(lines)):
+            self.play(arr.move(lines[i]))
+            self.info_update(infos[i])
+            self.wait()
 
-        c1_l = copy.deepcopy(p1[:idx])
-        c1_l.next_to(p1[idx//2], DOWN * 7)
-        self.play(ReplacementTransform(p1[:idx].copy(), c1_l))
+        # Introduce code detail.
 
-        c1_r = copy.deepcopy(p2[idx:])
-        c1_r.next_to(c1_l, RIGHT, buff=0)
-        self.play(ReplacementTransform(p2[idx:].copy(), c1_r))
+        ## __init__
+        code3 = MyCode("nn_3.py")
 
-        c2_l = copy.deepcopy(p2[:idx])
-        c2_l.next_to(p2[idx//2], DOWN * 7)
-        self.play(ReplacementTransform(p2[:idx].copy(), c2_l))
+        self.play(FadeOut(code.code[5:], shift=DOWN), FadeOut(arr),
+                  self.info_clear())
+        code.code[5:] = code3.code[5:]
+        self.play(FadeIn(code.code[5:34], shift=UP))
+        self.play(FadeIn(code.code[34:], shift=UP))
+        w_bs = [0.2, 0.3, -0.3, 0.5, 0.5, 0.1, 0.3, 0.6, 0.2, 0.1, 0.8]
+        ws = [0.2, 0.3, 0.5, 0.1, 0.6, 0.2]
+        bs = [-0.3, 0.5, 0.3, 0.1, 0.8] 
+        weights = Array(11, w_bs, size=0.5, stroke_width=2).shift(RIGHT*4+UP*3)
+        self.play(code.animate.shift(LEFT*3),
+                  code3.animate.shift(LEFT*3),
+                  title.animate.shift(LEFT*3))
+        arr = CodeArr(code, 36)
+        self.play(FadeIn(arr))
+        self.play(ReplacementTransform(code.code[36].copy(), weights))
+        self.wait()
+        self.play(arr.move(37))
+        self.wait()
+        self.play(arr.move(5))
 
-        c2_r = copy.deepcopy(p1[idx:])
-        c2_r.next_to(c2_l, RIGHT, buff=0)
-        self.play(ReplacementTransform(p1[idx:].copy(), c2_r))
+        # nn
+        nn = VGroup()
+        struct = [1, 2, 1, 2]
+        for i in range(4):
+            nn.add(VGroup(*[Circle(0.3, color=WHITE, stroke_width=2) 
+                for _ in range(struct[i])]).arrange(DOWN, buff=1)).arrange(RIGHT, 0.5)
+        nn.shift(RIGHT * 4 + UP * 0.2)
 
-        self.play(FadeOut(c2_l, shift=RIGHT), FadeOut(c2_r, shift=RIGHT), 
-                  c1_l.animate.shift(RIGHT * 3.3), c1_r.animate.shift(RIGHT * 3.3))
+        nn_edges = VGroup()
+        ws_vg = VGroup()
+        cnt = 0
+        for i in range(3):
+            edges = VGroup()
+            vg = VGroup()
+            for j in range(struct[i]):
+                for k in range(struct[i + 1]):
+                    e = Line(nn[i][j], nn[i + 1][k], stroke_width=2, color=WHITE)
+                    text = MathTex(str(ws[cnt]), color=WHITE, font_size=16).next_to(e, DOWN * 0.05)
+                    cnt += 1
+                    vg.add(text)
+                    edges.add(e)
+                ws_vg.add(vg)
 
-        c = VGroup()
-        for i in range(idx):
-            c.add(copy.deepcopy(c1_l[i])).arrange(RIGHT, buff=0)
-        for i in range(n - idx):
-            c.add(copy.deepcopy(c1_r[i])).arrange(RIGHT, buff=0)
+            nn_edges.add(edges)
 
-        self.add(c)
-        c.move_to(c1_r[1])
-        c.shift(RIGHT*0.3)
-        self.remove(c1_l, c1_r)
+        b = Circle(0.2, color=WHITE, stroke_width=2)
+        t = Text("b", font_size=14).move_to(b)
+        nn_b = VGroup(*[VGroup(b.copy(), t.copy()) for _ in range(3)]).arrange(RIGHT, buff=0.68)
+        nn_b.shift(RIGHT * 3.7 + UP*2)
+        nn_bedges = VGroup()
+        bs_vg = VGroup()
+        cnt = 0
+        for i in range(3):
+            vg = VGroup()
+            vg1 = VGroup()
+            for j in range(struct[i + 1]):
+                e = DashedLine(nn_b[i], nn[i + 1][j], stroke_width=2, color=WHITE)
+                text = MathTex(str(bs[cnt]), color=WHITE, font_size=16).move_to(e).shift(UP * 0.3)
+                cnt += 1
+                vg.add(e)
+                vg1.add(text)
+            bs_vg.add(vg1)
+            nn_bedges.add(vg)
 
-        for i in range(n):
-            c[i][0].set_fill(WHITE, opacity=0)
+        self.play(arr.move(6))
+        for i in range(4):
+            self.play(arr.move(8 + i))
+            if i != 3:
+                self.play(FadeIn(nn[i]), FadeIn(nn_b[i]))
+            else:
+                self.play(FadeIn(nn[i]))
+
+        for i in range(3):
+            self.play(arr.move(13 + i))
+            self.play(FadeIn(nn_edges[i]), FadeIn(nn_bedges[i]))
+
+        # activate function
+        self.play(arr.move(17))
+        ax = Axes(
+            x_range=(-0.2, 1.2, 0.2),
+            y_range=(-0.2, 1.2, 0.2),
+            axis_config={
+                'color': GREY_A,
+                'stroke_width': 2,
+            },
+        )
+        ax.scale(0.2).shift(RIGHT*2.5+DOWN*2)
+        relu = ax.plot(
+            lambda x: max(x, 0),
+            use_smoothing=False,
+            color=BLUE,
+            stroke_width=2,
+        )
+        self.play(Write(ax, lag_ratio=0.01, run_time=1))
+        self.play(Create(relu))
+
+        self.play(arr.move(18))
+        ax2 = Axes(
+            x_range=(-5, 5, 1),
+            y_range=(-0.2, 1, 0.2),
+            axis_config={
+                'color': GREY_A,
+                'stroke_width': 2,
+            },
+        )
+        ax2.scale(0.2).shift(RIGHT*5.5+DOWN*2)
+        sigmod = ax2.plot(
+            lambda x: 1.0 / (1.0 + math.exp(-x)),
+            color=BLUE,
+            stroke_width=2,
+        )
+        self.play(Write(ax2, lag_ratio=0.01, run_time=1))
+        self.play(Create(sigmod))
+
+        ## set_weight
+        self.play(arr.move(20))
+        self.play(FadeOut(code.code[5:21], shift=DOWN), FadeOut(arr))
+        code4 = MyCode("nn_4.py").code.shift(LEFT * 3)
+        code.code[5:21] = code4[5:21]
+        self.play(FadeIn(code.code[5:21], shift=UP))
+        arr.move(5, animate=False)
+        self.play(arr.move(6))
+        self.play(Indicate(weights, color=RED))
+        self.play(arr.move(7))
+        indics = [2, 4, 6, 7, 9]
+        texts = ["x", "xx", "y", "yy", "z"]
+        ar = Arrow(start=UP*0.2, end=DOWN*0.1, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.3)
+        for i in range(5):
+            self.play(arr.move(8 + i))
+            vg = VGroup(MathTex(texts[i], font_size=18, color=RED),
+                        ar.copy()).arrange(DOWN, buff=0.1)
+            vg.next_to(weights[indics[i]], UP*0.1).shift(weights[i].width / 2 * LEFT)
+            self.play(FadeIn(vg, shift=DOWN))
+
+        indics = [0, 2, 4, 6, 7, 9, 11]
+        for i in range(3):
+            l = indics[2*i]
+            r = indics[2*i+1]
+            rr = indics[2*i+2]
+            self.play(arr.move(13 + 2 * i))
+            self.play(ReplacementTransform(weights[l:r].copy(), ws_vg[i]))
+            self.play(arr.move(13 + 2 * i + 1))
+            self.play(ReplacementTransform(weights[r:rr].copy(), bs_vg[i]))
+
+        ## predict & forward
+        self.play(arr.move(38))
+        self.play(FadeOut(code.code[5:21], shift=DOWN))
+        code5 = MyCode("nn_5.py").code.shift(LEFT * 3)
+        code.code[5:20] = code5[5:20]
+        self.play(FadeIn(code.code[5:9], shift=UP))
+        self.play(arr.move(5))
+        self.play(arr.move(6))
+        t_in = Text("1", font_size=18, color=RED).move_to(nn[0][0])
+        self.wait(0.4)
+        self.play(arr.move(7))
+        self.wait(0.4)
+        self.play(ReplacementTransform(code.code[7][9:14].copy(), t_in))
+        self.play(FadeIn(code.code[9:19], shift=UP), arr.move(10))
+
+        color = BLUE_E
+        run_time = 1
+        xs = [[-0.1, 0.8], [0.38], [0.328, 0.876]]
+        ys = [[0.0, 0.8], [0.38], [0.5813, 0.7060]]
+        for i in range(3):
+            axs = ax if i < 2 else ax2
+            self.play(arr.move(11 + 2 * i))
+            self.wait()
+            self.play(ShowPassingFlash(nn_edges[i].copy().set_color(color),
+                                              run_time=run_time,
+                                              time_width=run_time),
+                      ShowPassingFlash(nn_bedges[i].copy().set_color(color),
+                                              run_time=run_time,
+                                              time_width=run_time),
+                      )
+            node_texts = VGroup()
+            x_dots = VGroup()
+            y_dots = VGroup()
+            lines = VGroup()
+            node_texts1 = VGroup()
+            for j in range(len(nn[i + 1])):
+                node_texts.add(MathTex(str(xs[i][j]), font_size = 17, color=GREEN_C).move_to(nn[i + 1][j]))
+                x_dots.add(Dot(axs.coords_to_point(xs[i][j], 0), color=GREEN).scale(0.5))
+                y_dots.add(Dot(axs.coords_to_point(0, ys[i][j]), color=RED).scale(0.5))
+                lines.add(axs.get_lines_to_point(axs.c2p(xs[i][j],ys[i][j])))
+                node_texts1.add(MathTex(str(ys[i][j]), font_size = 17, color=RED).move_to(nn[i + 1][j]))
+
+            self.play(FadeIn(node_texts))
+            self.wait(0.5)
+            self.play(arr.move(12 + 2 * i))
+            self.wait()
+            self.play(ReplacementTransform(node_texts, x_dots))
+            self.play(FadeIn(lines), FadeIn(y_dots))
+            self.wait(0.5)
+            self.play(ReplacementTransform(y_dots, node_texts1))
+            self.remove(x_dots, lines)
+            self.wait(0.5)
+
+        self.play(arr.move(8))
+        self.wait()
+        self.play(Indicate(nn[3][1], color=RED))
+        self.wait()
+        self.play(FadeOut(*self.mobjects))
+
+    def add_main(self):
+        # Introduce code structure.
+        anims = []
+        anims.append(FadeIn(self.codes[2:]))
+        anims.append(FadeIn(self.codes_title[2:]))
+        anims.append(FadeIn(self.codes_desc[2:]))
+        self.play(*anims)
         self.wait()
 
-        self.play(c[0][0].animate.set_fill(TEAL, opacity=0.4),
-                  c[2][0].animate.set_fill(TEAL, opacity=0.4),
-                  c[4][0].animate.set_fill(TEAL, opacity=0.4),
-                  c[6][0].animate.set_fill(TEAL, opacity=0.4), run_time=0.4)
-        self.wait()
-        arrow2 = Arrow(start=0.5*UP, end=DOWN).shift(DOWN * 1.2)
-        text2 = Text("变异", font_size=18).next_to(arrow2, RIGHT)
-        self.play(FadeIn(arrow2), FadeIn(text2))
+        anims = []
+        title = MathTex("main.py", font_size=24).set_color([BLUE_E, TEAL_D]).shift(UP*3.7+RIGHT*3)
+        code = MyCode("main_2.py")
+        anims.append(ReplacementTransform(self.codes[2], code))
+        anims.append(ReplacementTransform(self.codes_title[2], title))
+        anims.append(FadeOut(self.codes_desc[2:]))
+        self.play(*anims)
+        anims = []
+        lines = [7, 10, 15, 19, 22, 25, 28, 31, 34]
+        infos = ["初始化个体", "计算个体适应度", "初始化遗传算法", "生成初始种群",
+                     "交叉", "变异", "精英选择", "轮盘赌选择", "进化"]
+        arr = CodeArr(code, lines[0])
+        self.play(FadeIn(arr))
+        self.info_update(infos[0])
+        for i in range(1, len(lines)):
+            self.play(arr.move(lines[i]))
+            self.info_update(infos[i])
+            self.wait(0.8)
 
-        cc = copy.deepcopy(c)
-        cc.next_to(c, DOWN * 7)
-        new_t1 = str(round(float(cc[0][1].text) + np.random.normal()*0.2, 2))
-        new_t2 = str(round(float(cc[2][1].text) + np.random.normal()*0.2, 2))
-        new_t3 = str(round(float(cc[4][1].text) + np.random.normal()*0.2, 2))
-        new_t4 = str(round(float(cc[6][1].text) + np.random.normal()*0.2, 2))
-        cc[0].update_text(new_t1)
-        cc[2].update_text(new_t2)
-        cc[4].update_text(new_t3)
-        cc[6].update_text(new_t4)
-        self.play(ReplacementTransform(c.copy(), cc))
+        # Individual
+        self.play(FadeOut(code.code[13:37], shift=DOWN), FadeOut(arr), self.info_clear())
+        code3 = MyCode("main_3.py")
+        self.play(ReplacementTransform(code.code[5:13], code3.code[5:18]))
+        code.code[5:18] = code3.code[5:18]
+        self.wait()
+        self.play(Indicate(code3.code[8:12], color=RED))
+        self.info_update("初始化个体基因、得分、步数、随机数种子")
         self.wait(2)
+        self.play(Indicate(code3.code[14:17], color=RED))
+        self.info_update("进行一轮游戏，根据得分、步数计算适应度")
+        self.wait(2)
+        code4 = MyCode("main_4.py")
+        code.code[5:21] = code4.code[5:21]
+        self.play(FadeOut(code3.code[5:18], shift=DOWN),
+                  FadeIn(code.code[5:21], shift=UP),
+                  self.info_clear())
 
-        self.remove(p1, p2, c, arrow1, text1, arrow2, text2)
-        self.play(cc.animate.shift(UP * 6),
-                  cc[0][0].animate.shift(UP * 6).set_fill(BLACK, opacity=0),
-                  cc[2][0].animate.shift(UP * 6).set_fill(BLACK, opacity=0),
-                  cc[4][0].animate.shift(UP * 6).set_fill(BLACK, opacity=0),
-                  cc[6][0].animate.shift(UP * 6).set_fill(BLACK, opacity=0))
+        # GA
+        self.play(Indicate(code.code[9:14], color=RED))
+        self.info_update("初始化种群大小、基因长度、变异概率等")
+        self.wait(2)
+        self.play(Indicate(code.code[18:21], color=RED))
+        self.info_update("生成初始种群, 基因是(-1,1)区间均匀分布")
+        self.wait(2)
+        self.play(FadeOut(code.code[7:22], shift=DOWN), self.info_clear())
 
-        self.genes = cc
+        ## crossover
+        code5 = MyCode("main_5.py")
+        code.code[7:17] = code5.code[7:17]   
+        self.play(FadeIn(code.code[7:17], shift=UP)) 
+        self.play(code.animate.shift(LEFT*3),
+                  code5.animate.shift(LEFT*3),
+                  title.animate.shift(LEFT*3))
+        
+        arr.move(7, False) 
+        self.play(FadeIn(arr))
+        n = 5
+        p1 = Array(n, [round(random.random(), 3) for _ in range(n)],
+                   size=0.4, stroke_width=2)
+        p2 = Array(n, [round(random.random(), 3) for _ in range(n)],
+                   size=0.4, stroke_width=2)
+        vg_genes = VGroup(p1, p2).arrange(RIGHT, buff=0.5)
+        vg_genes.shift(RIGHT*4)
+        self.play(FadeIn(vg_genes))
+
+        self.play(arr.move(8))
+        ar = Arrow(start=UP*0.2, end=DOWN*0.1, stroke_width=2,
+                     max_tip_length_to_length_ratio=0.3)
+        ar1 = ar.copy()
+        ar.next_to(p1[1], UP*0.1).shift(p1[2].width / 2 * RIGHT)
+        ar1.next_to(p2[1], UP*0.1).shift(p2[2].width / 2 * RIGHT)
+        self.play(FadeIn(VGroup(ar, ar1), shift=DOWN))
+
+        self.play(arr.move(9))
+        pos1 = p1[3].get_center()
+        pos2 = p2[3].get_center()
+        path1 = ArcBetweenPoints(pos1, pos2, angle=-PI/2)
+        path2 = ArcBetweenPoints(pos2, pos1, angle=-PI/2)
+        self.play(MoveAlongPath(p1[-3:], path1),
+                  MoveAlongPath(p2[-3:], path2), run_time=1)
+
+        self.play(FadeOut(VGroup(ar, ar1)), arr.move(11))
+
+        ## mutation
+        self.play(arr.move(12))
+        self.wait(0.8)
+        mutation_array1 = Array(5, [0, 0, 1, 0, 0], size=0.4, stroke_width=2)
+        mutation_array2 = Array(5, [0, 1, 0, 0, 0], size=0.4, stroke_width=2)
+        mu_vg = VGroup(mutation_array1, mutation_array2).arrange(RIGHT, buff=0.5)
+        mu_vg.shift(RIGHT*4+UP)
+        m1 = np.round(np.random.normal(size=5), 3)
+        m2 = np.round(np.random.normal(size=5), 3)
+        mutation1 = Array(5, list(m1), size=0.4, stroke_width=2) 
+        mutation2 = Array(5, list(m2), size=0.4, stroke_width=2) 
+        muu_vg = VGroup(mutation1, mutation2).arrange(RIGHT, buff=0.5)
+        muu_vg.shift(RIGHT*4+UP*2)
+
+        self.play(FadeIn(mu_vg, shift=DOWN))
+        self.play(arr.move(13))
+        self.wait(0.5)
+        self.play(FadeIn(muu_vg, shift=DOWN))
+        self.play(arr.move(14))
+        self.wait(0.5)
+        self.play(Indicate(mu_vg[0][2], color=RED),
+                  Indicate(muu_vg[0][2], color=RED),
+                  Indicate(mu_vg[1][1], color=RED),
+                  Indicate(muu_vg[1][1], color=RED),
+                  )
+        self.wait(0.5)
+        self.play(mutation1[2].animate.update_text(str(round(m1[2]*0.2, 3)), size=0.2),
+                    mutation2[1].animate.update_text(str(round(m1[1]*0.2, 3)), size=0.2))
+
+        self.play(arr.move(15))
+        self.wait(0.5)
+        self.play(Indicate(mu_vg[0][2], color=RED),
+                  Indicate(muu_vg[0][2], color=RED),
+                  Indicate(p2[2], color=RED),
+                  Indicate(mu_vg[1][1], color=RED),
+                  Indicate(muu_vg[1][1], color=RED),
+                  Indicate(p2[1], color=RED))
+        self.wait(0.5)
+        self.play(p2[2].animate.update_text(str(round(m1[2]*0.2+float(p2[2][1].text), 3)), size=0.2),
+                    p2[1].animate.update_text(str(round(m1[1]*0.2+float(p2[1][1].text), 3)), size=0.2))
+
+        ## select
+        self.play(FadeOut(code.code[7:17], shift=DOWN), FadeOut(arr))
+        code6 = MyCode("main_6.py").shift(LEFT*3)
+        code.code[7:25] = code6.code[7:25]   
+        self.play(FadeIn(code.code[7:25], shift=UP))
+        self.wait(0.5)
+        self.play(Indicate(code.code[8:11], color=RED))
+        self.info = Info("")
+        self.info_update("精英选择: 对种群按适应度大小排序，返回前#size个", pos=LEFT*3+DOWN*3)
+        self.wait(1.5)
+        self.play(Indicate(code.code[13:25], color=RED))
+        self.info_update("轮盘赌选择: 适应度越大被选概率越大", pos=LEFT*3+DOWN*3)
+        self.wait(1.5)
+
+        n = 10
+        angles = [0.05, 0.01, 0.02, 0.4, 0.05, 0.07, 0.01, 0.2, 0.1, 0.09]
+
+        wheel = VGroup()
+        lines = VGroup()
+        secs = VGroup()
+        angle = 1
+        line = Line(ORIGIN, RIGHT*2, stroke_width=1, color=GREY_C)
+        for i in range(10):
+            sec = AnnularSector(outer_radius=2, inner_radius=0, angle=2*PI*angle)
+            sec.set_color(COLORS[i])
+            secs.add(sec)
+            line = line.copy().rotate(-2*PI*angles[i], about_point=RIGHT-RIGHT)
+            lines.add(line)
+            angle -= angles[i]
+        dot = Dot(color=WHITE)
+        circle = Circle(2, color=GREY_C, stroke_width=2)
+        arrow = Arrow(buff=0, start=ORIGIN, end=RIGHT*1.5, stroke_width=3,
+                      color=GREY_E, max_tip_length_to_length_ratio=0.1)
+        wheel.add(secs, lines, circle, arrow, dot)
+        wheel.shift(RIGHT*4)
+        self.play(FadeIn(secs, scale=0.5), FadeIn(lines, scale=0.5), FadeIn(circle, scale=0.5),
+                  FadeOut(p1, p2, mu_vg, muu_vg))
+        self.play(Create(dot), Create(arrow))
+        self.wait(0.3)
+        self.play(Rotate(arrow, angle=8*PI+0.75*PI, about_point=dot.get_center(),
+                         rate_func=rush_from), run_time=3)
+
+        self.play(FadeOut(wheel), self.info_clear(), FadeOut(code.code[7:25]))
+
+        ## envole
+        code7 = MyCode("main_7.py").shift(LEFT*3)
+        code.code[7:26] = code7.code[7:26]   
+        self.play(FadeIn(code.code[7:26], shift=UP))
+        self.wait(0.5)
+        arr = CodeArr(code, 7)
+        self.play(FadeIn(arr))
+        self.info = Info("")
+        self.info_update("进化", pos=LEFT*3+DOWN*3)
+        self.play(FadeOut(arr))
+        self.wait(1)
+        self.play(Indicate(code.code[8:13], color=RED))
+        self.info_update("计算个体适应度，并选取适应度高的个体作为父代", pos=LEFT*3+DOWN*3)
+        self.wait(2)
+        self.play(Indicate(code.code[15:23], color=RED))
+        self.info_update("每次轮盘赌选择两个父代个体，并交叉、变异生成两个子代个体",
+                         pos=LEFT*3+DOWN*3)
+        self.wait(2.3)
+        self.remove(*self.mobjects)
+
+class Test(Scene):
+    def construct(self):
+        genes_list = []
+        n = 100
+        size = 20
+        for i in range(n):
+            genes_pth = os.path.join("../", "genes", "all", str(i))
+            with open(genes_pth, "r") as f:
+                genes = np.array(list(map(float, f.read().split())))
+                genes_list.append(genes)
+ 
+        self.matrix = get_matrix(size, 0.3, stroke_width=1.5, color=GRAY_C)
+        self.add(self.matrix)
+        game = AiGame(genes_list=genes_list)
+        for snake in game.snakes:
+            snake.color = random_color()
+
+        board = [(x, y) for x in range(game.X) for y in range(game.Y)]
+        alive_snakes_set = set(game.snakes)
+        steps = 0
+
+        set_food = []
+        set_head = []
+        set_body = []
+        set_color = []
+        while alive_snakes_set:
+            steps += 1
+            for snake in alive_snakes_set:
+                has_eat = snake.move(game.food)
+                if has_eat:
+                    game.food = game.rand.choice(board)
+                if snake.score > game.best_score:
+                    game.best_score = snake.score
+            alive_snakes = [snake for snake in alive_snakes_set if not snake.dead]
+            alive_snakes_set = set(alive_snakes)
+
+            set_food.append(game.food)
+            bodys = []
+            heads = []
+            colors = []
+            for snake in alive_snakes:
+                tmp_body = []
+                for body in snake.body:
+                    tmp_body.append(body)
+                bodys.append(tmp_body)
+                heads.append(snake.body[0])
+                colors.append(snake.color)
+            set_head.append(heads)
+            set_body.append(bodys)
+            set_color.append(colors)
+
+        print(steps)
+        nums = 1500
+        shows = [[i for i in range(nums)]]
+        #shows.append([i for i in range(steps//2-2*nums, steps//2)])
+        #shows.append([i for i in range(steps-nums, steps-20)])
+        for show in shows:
+            for step in show:
+                for i in range(size):
+                    for j in range(size):
+                        self.matrix[i][j].set_fill(BLACK, opacity=1)
+                food = set_food[step]
+                heads = set_head[step]
+                bodys = set_body[step]
+                colors = set_color[step]
+                self.matrix[food[1]][food[0]].set_fill(PURE_RED, opacity=1)
+                # for head in heads:
+                    # self.matrix[head[1]][head[0]].set_fill(WHITE, opacity=1)
+                for i in range(len(bodys)):
+                    for body in bodys[i]:
+                        self.matrix[body[1]][body[0]].set_fill(colors[i], opacity=1)
+                self.wait(0.04)
+                # if step == show[0] and show != shows[0]:
+                    # self.play(FadeIn(self.matrix), run_time=1)
+            # if show != shows[-1]:
+                # self.play(FadeOut(self.matrix), run_time=1)
+
+        self.play(FadeOut(self.matrix))
         self.wait()
+
+class Test2(Scene):
+    def construct(self):
+        #ax = Axes(x_range=(-2, 2), y_range=(-5, 0))
+        color = TEAL
+        face = ParametricFunction(self.func, t_range=(-PI, PI),
+                                  fill_color=color, fill_opacity=1,
+                                  color=color, stroke_width=0.1)
+        face.shift(UP * 3)
+
+        start=PI/4
+        end=PI/2
+        eye = Arc(radius=0.15, start_angle=start, angle=end, stroke_width=2, color=BLACK)
+        eyes = VGroup(eye.copy(), eye.copy()).arrange(RIGHT, buff=0.7)
+        eyes.move_to(face)
+
+        end = -PI/2 + 5 * DEGREES
+        start = -30 * DEGREES
+        mouth = Arc(radius=1, start_angle=start, angle=end, stroke_width=2.5, color=BLACK)
+        mouth.move_to(face).shift(DOWN * 1.2)
+
+        water = VGroup(face, mouth, eyes).scale(0.5)
+
+        self.add(water)
+
+
+    def func(self, t):
+        a = 1
+        b = 2.3
+        x = a * (1 - math.sin(t)) * math.cos(t)
+        y = b * (math.sin(t) - 1)
+        return [x, y, 0]
 
