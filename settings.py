@@ -2,8 +2,8 @@
 TITLE = "Snake"
 GRID_SIZE = 30
 BLANK_SIZE = 40
-ROWS = 20
-COLS = 20
+ROWS = 10
+COLS = 10
 FPS = 80
 FONT_NAME = 'arial'
 

@@ -53,7 +53,7 @@ class GA:
             self.population.append(Individual(genes))
     
     def inherit_ancestor(self):
-        """Load genes from file."""
+        """Load genes from './genes/all/{i}', i: the ith individual."""
         for i in range(self.p_size):
             pth = os.path.join("genes", "all", str(i))
             with open(pth, "r") as f:
@@ -73,7 +73,7 @@ class GA:
         c_genes[mutation_array] += mutation[mutation_array]
 
     def elitism_selection(self, size):
-        """Select the top #size individuals to be parents"""
+        """Select the top #size individuals to be parents."""
         population = sorted(self.population, key =lambda individual: individual.fitness, reverse=True)
         return population[:size]
 
@@ -117,43 +117,43 @@ class GA:
         random.shuffle(children)
         self.population.extend(children)
 
-def save_best(ga):
-    """Save the best individual that can get #score score so far."""
-    score = ga.best_individual.score
-    genes_pth= os.path.join("genes", "best", str(score))
-    with open(genes_pth, "w") as f:
-        for gene in ga.best_individual.genes:
-            f.write(str(gene) + " ") 
-    seed_pth = os.path.join("seed", str(score))
-    with open(seed_pth, "w") as f:
-        f.write(str(ga.best_individual.seed)) 
-
-def save_all(ga):
-    """Save the population."""
-    for individual in ga.population:
-        individual.get_fitness()
-    population = ga.elitism_selection(ga.p_size)
-    for i in range(len(population)):
-        pth = os.path.join("genes", "all", str(i))
-        with open(pth, "w") as f:
-            for gene in ga.population[i].genes:
+    def save_best(self):
+        """Save the best individual that can get #score score so far."""
+        score = self.best_individual.score
+        genes_pth= os.path.join("genes", "best", str(score))
+        with open(genes_pth, "w") as f:
+            for gene in self.best_individual.genes:
                 f.write(str(gene) + " ") 
+        seed_pth = os.path.join("seed", str(score))
+        with open(seed_pth, "w") as f:
+            f.write(str(self.best_individual.seed)) 
+
+    def save_all(self):
+        """Save the population."""
+        for individual in self.population:
+            individual.get_fitness()
+        population = self.elitism_selection(self.p_size)
+        for i in range(len(population)):
+            pth = os.path.join("genes", "all", str(i))
+            with open(pth, "w") as f:
+                for gene in self.population[i].genes:
+                    f.write(str(gene) + " ") 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-c', '--choice', default='generate', 
-                         help=" 'generate' to generate new ancestor, 'inherit' to load from path ./all_individual.")
+    parser.add_argument('-i', '--inherit', action="store_true", 
+                         help="Whether to load genes from path ./genes/all.")
 
-    parser.add_argument('-s', '--show', action="store_true", help='If show the best individual to  play snake after each envolve.')
+    parser.add_argument('-s', '--show', action="store_true", help='whether to show the best individual to play snake after each envolve.')
     args = parser.parse_args()
 
     ga = GA()
     
-    if args.choice == 'generate':
-        ga.generate_ancestor()
-    else:
+    if args.inherit:
         ga.inherit_ancestor()
+    else:
+        ga.generate_ancestor()
 
     generation = 0
     record = 0
@@ -164,13 +164,13 @@ if __name__ == '__main__':
               ", best score:", ga.best_individual.score, ", average score:", ga.avg_score)
         if ga.best_individual.score >= record:
             record = ga.best_individual.score 
-            save_best(ga)
+            ga.save_best()
         if args.show:
             genes = ga.best_individual.genes
             seed = ga.best_individual.seed
             game = Game(show=True, genes_list=[genes], seed=seed)
             game.play()
     
-        #Save the population every 20 generation.
+        # Save the population every 20 generation.
         if generation % 20 == 0:
-            save_all(ga)
+            ga.save_all()

@@ -17,6 +17,7 @@ class Snake:
         board_x: X axis's length of the board.
         board_y: Y axis's length of the board.
         nn: Neural Network defined by the arg genes.
+        color: Color of the snake body.
     """
 
     def __init__(self, head, direction, genes, board_x, board_y):
@@ -136,7 +137,7 @@ class Game:
             direction = DIRECTIONS[self.rand.randint(0, 3)]
             self.snakes.append(Snake(head, direction, genes, self.X, self.Y))
         
-        self.food = self.place_food()
+        self.food = self._place_food()
         self.best_score = 0
 
         if show:
@@ -161,7 +162,7 @@ class Game:
             for snake in alive_snakes_set:
                 has_eat = snake.move(self.food)
                 if has_eat: 
-                    self.food = self.place_food()
+                    self.food = self._place_food()
                     if self.food is None:
                         break
                 if snake.score > self.best_score:
@@ -177,7 +178,8 @@ class Game:
 
         return score, steps, self.seed
 
-    def place_food(self):
+    def _place_food(self):
+        """Find an empty grid to place food."""
         board = set([(x, y) for x in range(self.X) for y in range(self.Y)])
         for snake in self.snakes:
             if not snake.dead:
@@ -244,7 +246,7 @@ class Game:
 def play_best(score):
     """Use the saved Neural Network model play the game.
     Args:
-        score: Specify which model to load, also indicates the highest score it can get.
+        score: Specify which individual's genes to load, also indicates the highest score it can get.
     """
     genes_pth = os.path.join("genes", "best", str(score))
     with open(genes_pth, "r") as f:
@@ -257,10 +259,10 @@ def play_best(score):
     game = Game(show=True, genes_list=[genes], seed=seed)
     game.play()
 
-def play_all(n):
-    """Use the saved Neural Network model play the game.
+def play_all(n=P_SIZE):
+    """Use the saved population's genes play the game.
     Args:
-        score: Specify which model to load, also indicates the highest score it can get.
+        n: the size of the population.
     """
     genes_list = []
     for i in range(n):
