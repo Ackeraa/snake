@@ -3,7 +3,7 @@
 > 本项目参考自：https://github.com/Chrispresso/SnakeAI
 
 <p align="center">
-    <img src="https://github.com/Ackeraa/snake/blob/master/snake.gif"  width="30%" height="30%" />
+    <img src="https://github.com/Ackeraa/snake/blob/main/snake.gif"  width="30%" height="30%" />
 </p>
 
 使用遗传算法和简单神经网络实现贪吃蛇，其中
@@ -31,7 +31,7 @@
 
 ## 改进方向
 * 输入的状态可扩展
-* 本项目的适应度函数设计的极其简单，会导致蛇绕很多圈子。可以加大对步数的惩罚
+* 本项目的适应度函数设计的极其简单，会导致蛇绕很多圈子， 可以加大对步数的惩罚
 * 可以多条蛇竞争，绕弯路的蛇被淘汰的可能性或许会增大，但前提是得有一个好的适应度函数
-* 调整网络结构、变异概率等参数
+* 调整网络结构、交叉、变异算子等
 
